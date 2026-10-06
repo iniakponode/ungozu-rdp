@@ -1,0 +1,17 @@
+[Unit]
+Description=Ungozu R&D Next.js
+After=network.target ungozu-rdp-api.service
+[Service]
+Type=simple
+User=__APP_USER__
+Group=__APP_GROUP__
+WorkingDirectory=__APP_ROOT__/frontend
+Environment=NODE_ENV=production
+EnvironmentFile=__APP_ROOT__/frontend/.env.production
+ExecStart=__NPM_PATH__ run start -- --hostname 127.0.0.1 --port 3010
+Restart=always
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+[Install]
+WantedBy=multi-user.target

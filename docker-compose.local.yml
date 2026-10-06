@@ -1,0 +1,28 @@
+services:
+  db:
+    image: mariadb:11.4
+    container_name: ungozu-rdp-db
+    restart: unless-stopped
+    environment:
+      MARIADB_DATABASE: ungozu_rdp
+      MARIADB_USER: ungozu_rdp
+      MARIADB_PASSWORD: rdp_dev_password
+      MARIADB_ROOT_PASSWORD: rdp_root_dev_password
+    ports:
+      - "3307:3306"
+    volumes:
+      - ungozu_rdp_db:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: ungozu-rdp-mailpit
+    restart: unless-stopped
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+volumes:
+  ungozu_rdp_db:

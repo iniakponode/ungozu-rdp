@@ -1,0 +1,16 @@
+[Unit]
+Description=Ungozu R&D FastAPI
+After=network.target mariadb.service mysql.service
+[Service]
+Type=simple
+User=__APP_USER__
+Group=__APP_GROUP__
+WorkingDirectory=__APP_ROOT__/backend
+EnvironmentFile=__APP_ROOT__/backend/.env
+ExecStart=__APP_ROOT__/.runtime/venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8010 --proxy-headers --forwarded-allow-ips=127.0.0.1
+Restart=always
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+[Install]
+WantedBy=multi-user.target

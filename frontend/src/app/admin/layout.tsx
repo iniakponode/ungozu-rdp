@@ -1,0 +1,3 @@
+'use client'
+import { usePathname } from 'next/navigation'; import { useAuth } from '@/hooks/use-auth'; import { RDPAdminNav } from '@/components/rdp-admin-nav'
+export default function AdminLayout({children}:{children:React.ReactNode}){const pathname=usePathname();const {user,loading,logout}=useAuth();if(pathname==='/admin/login')return <>{children}</>;if(loading||!user?.is_admin)return <div className="flex min-h-screen items-center justify-center text-sm text-muted-foreground">Verifying administrator access…</div>;return <div className="flex min-h-screen bg-background"><RDPAdminNav onLogout={logout}/><main className="min-w-0 flex-1"><div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">{children}</div></main></div>}

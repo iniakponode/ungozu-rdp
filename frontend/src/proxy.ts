@@ -1,0 +1,3 @@
+import { NextResponse } from 'next/server'; import type { NextRequest } from 'next/server'
+export function proxy(request:NextRequest){const {pathname}=request.nextUrl;if(pathname.startsWith('/admin')){const token=request.cookies.get('admin_token')?.value;if(pathname==='/admin/login'){if(token)return NextResponse.redirect(new URL('/admin',request.url));return NextResponse.next()}if(!token){const u=new URL('/admin/login',request.url);u.searchParams.set('redirect',pathname);return NextResponse.redirect(u)}}if(pathname.startsWith('/portal')&&!request.cookies.get('rdp_portal_token')?.value){const u=new URL('/login',request.url);return NextResponse.redirect(u)}return NextResponse.next()}
+export const config={matcher:['/admin/:path*','/portal/:path*']}

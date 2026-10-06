@@ -1,0 +1,18 @@
+'use client'
+import { FormEvent, useState } from 'react'
+import Link from 'next/link'
+import { submitRdpScholarship } from '@/lib/rdp-api'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
+import { RDPSectionHeading } from '@/components/rdp/rdp-ui'
+
+export default function ScholarshipClient({initialRef,initialToken}:{initialRef:string;initialToken:string}){
+ const [ref,setRef]=useState(initialRef),[token,setToken]=useState(initialToken),[support,setSupport]=useState('partial_subsidy'),[need,setNeed]=useState(''),[contribution,setContribution]=useState(''),[caseText,setCaseText]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState(''),[done,setDone]=useState(false)
+ async function submit(e:FormEvent){e.preventDefault();setBusy(true);setError('');try{await submitRdpScholarship({application_ref:ref,access_token:token,support_type:support,financial_need:need,possible_contribution:contribution||null,support_case:caseText});setDone(true)}catch(err){setError(err instanceof Error?err.message:'Could not submit scholarship request')}finally{setBusy(false)}}
+ if(done)return <div className="mx-auto max-w-3xl px-4 py-14 sm:px-6"><Card><CardHeader><CardTitle>Scholarship request received</CardTitle></CardHeader><CardContent className="space-y-4 text-sm text-muted-foreground"><p>Your request has been attached to application <b className="text-foreground">{ref}</b>. You can monitor its status from your private application-status link.</p><Button asChild><Link href={`/status?ref=${encodeURIComponent(ref)}&token=${encodeURIComponent(token)}`}>Return to application status</Link></Button></CardContent></Card></div>
+ return <div className="mx-auto max-w-3xl px-4 py-14 sm:px-6"><RDPSectionHeading eyebrow="Access support" title="Scholarship / subsidised-place request" text="Financial-support requests are assessed separately and are limited. Please provide enough context for a fair decision without sharing unnecessary sensitive personal information."/>
+ <form onSubmit={submit} className="mt-8 space-y-5"><Card><CardContent className="space-y-5 pt-6"><div><Label>Application reference</Label><Input required value={ref} onChange={e=>setRef(e.target.value)}/></div><div><Label>Private access token</Label><Input required type="password" value={token} onChange={e=>setToken(e.target.value)}/></div><div><Label>Support requested</Label><select value={support} onChange={e=>setSupport(e.target.value)} className="mt-2 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"><option value="partial_subsidy">Partial subsidy</option><option value="full_scholarship">Full scholarship</option><option value="flexible_payment_support">Flexible payment support</option></select></div><div><Label>Financial need</Label><Textarea required minLength={20} rows={5} value={need} onChange={e=>setNeed(e.target.value)} placeholder="Explain why the standard fee would be difficult to meet."/></div><div><Label>Possible contribution (optional)</Label><Input value={contribution} onChange={e=>setContribution(e.target.value)} placeholder="e.g. I can contribute ₦75,000 / US$150"/></div><div><Label>Why would support be particularly valuable for your development?</Label><Textarea required minLength={20} rows={5} value={caseText} onChange={e=>setCaseText(e.target.value)}/></div></CardContent></Card>{error&&<p className="text-sm text-destructive">{error}</p>}<Button disabled={busy}>{busy?'Submitting…':'Submit support request'}</Button></form></div>
+}

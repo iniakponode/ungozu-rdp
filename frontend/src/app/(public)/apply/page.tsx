@@ -1,0 +1,47 @@
+'use client'
+
+import { FormEvent, useState } from 'react'
+import Link from 'next/link'
+import { submitRdpApplication } from '@/lib/rdp-api'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
+import { RDPSectionHeading } from '@/components/rdp/rdp-ui'
+
+const initial={full_name:'',email:'',country:'Nigeria',institution:'',career_stage:'',discipline:'',research_interests:'',goals:'',challenges:'',current_outputs:'',commitment:'',scholarship_interest:false,referral_source:'',consent:false}
+
+export default function ApplyPage(){
+ const [form,setForm]=useState(initial),[busy,setBusy]=useState(false),[error,setError]=useState(''),[receipt,setReceipt]=useState<{application_ref:string;access_token:string;status:string;message:string}|null>(null)
+ const set=(k:string,v:string|boolean)=>setForm(x=>({...x,[k]:v}))
+ async function submit(e:FormEvent){e.preventDefault();setBusy(true);setError('');try{const r=await submitRdpApplication({cohort_slug:'founding-cohort-2026-2027',...form});setReceipt(r)}catch(err){setError(err instanceof Error?err.message:'Could not submit application')}finally{setBusy(false)}}
+ if(receipt){const status=`/status?ref=${encodeURIComponent(receipt.application_ref)}&token=${encodeURIComponent(receipt.access_token)}`; const scholarship=`/scholarship?ref=${encodeURIComponent(receipt.application_ref)}&token=${encodeURIComponent(receipt.access_token)}`; return <div className="mx-auto max-w-3xl px-4 py-14 sm:px-6"><Card><CardHeader><CardTitle>Application received</CardTitle></CardHeader><CardContent className="space-y-4"><p className="text-sm text-muted-foreground">Thank you. Your application has been recorded.</p><div className="rounded-lg border border-border bg-muted/30 p-4"><p className="text-xs uppercase tracking-wider text-muted-foreground">Application reference</p><p className="mt-1 font-mono text-lg font-semibold">{receipt.application_ref}</p></div><p className="text-sm text-muted-foreground">A private status link has also been sent to your email where SMTP is configured. Keep your status link/token private.</p><div className="flex flex-wrap gap-3"><Button asChild><Link href={status}>View application status</Link></Button>{form.scholarship_interest&&<Button asChild variant="outline"><Link href={scholarship}>Complete scholarship request</Link></Button>}</div></CardContent></Card></div>}
+ return <div className="mx-auto max-w-4xl px-4 py-14 sm:px-6 lg:px-8">
+  <RDPSectionHeading eyebrow="Founding Cohort 2026/2027" title="Participant application" text="Applications close 2 November 2026. The selection process considers development need, programme fit, commitment, motivation and potential to benefit and contribute."/>
+  <form onSubmit={submit} className="mt-8 space-y-6">
+   <Card><CardHeader><CardTitle className="text-lg">About you</CardTitle></CardHeader><CardContent className="grid gap-5 sm:grid-cols-2">
+    <div><Label htmlFor="full_name">Full name</Label><Input id="full_name" required value={form.full_name} onChange={e=>set('full_name',e.target.value)}/></div>
+    <div><Label htmlFor="email">Email</Label><Input id="email" type="email" required value={form.email} onChange={e=>set('email',e.target.value)}/></div>
+    <div><Label htmlFor="country">Country</Label><Input id="country" required value={form.country} onChange={e=>set('country',e.target.value)}/></div>
+    <div><Label htmlFor="institution">Institution / organisation</Label><Input id="institution" required value={form.institution} onChange={e=>set('institution',e.target.value)}/></div>
+    <div><Label htmlFor="career_stage">Career stage</Label><Input id="career_stage" required placeholder="e.g. Lecturer, postdoc, recent PhD, doctoral researcher" value={form.career_stage} onChange={e=>set('career_stage',e.target.value)}/></div>
+    <div><Label htmlFor="discipline">Discipline / field</Label><Input id="discipline" required value={form.discipline} onChange={e=>set('discipline',e.target.value)}/></div>
+   </CardContent></Card>
+   <Card><CardHeader><CardTitle className="text-lg">Research development</CardTitle></CardHeader><CardContent className="space-y-5">
+    <div><Label htmlFor="research_interests">Research interests</Label><Textarea id="research_interests" required minLength={20} rows={5} value={form.research_interests} onChange={e=>set('research_interests',e.target.value)} placeholder="What questions, problems or fields currently shape your research?"/></div>
+    <div><Label htmlFor="goals">What would you like to achieve during the 12 months?</Label><Textarea id="goals" required minLength={20} rows={5} value={form.goals} onChange={e=>set('goals',e.target.value)} placeholder="Research capability, publications, grants, collaborations, methods, impact, career goals…"/></div>
+    <div><Label htmlFor="challenges">What are your most important current research-development challenges?</Label><Textarea id="challenges" required minLength={20} rows={5} value={form.challenges} onChange={e=>set('challenges',e.target.value)}/></div>
+    <div><Label htmlFor="current_outputs">Current research outputs (optional)</Label><Textarea id="current_outputs" rows={4} value={form.current_outputs} onChange={e=>set('current_outputs',e.target.value)} placeholder="Papers, thesis, datasets, proposals, projects, conference work, software, policy outputs…"/></div>
+    <div><Label htmlFor="commitment">How will you make time for and contribute to the programme?</Label><Textarea id="commitment" required minLength={20} rows={5} value={form.commitment} onChange={e=>set('commitment',e.target.value)}/></div>
+   </CardContent></Card>
+   <Card><CardHeader><CardTitle className="text-lg">Access and declaration</CardTitle></CardHeader><CardContent className="space-y-4">
+    <label className="flex gap-3 text-sm"><input type="checkbox" checked={form.scholarship_interest} onChange={e=>set('scholarship_interest',e.target.checked)} className="mt-1"/><span>I would like to request consideration for a scholarship or subsidised place.</span></label>
+    <div><Label htmlFor="referral">How did you hear about the programme? (optional)</Label><Input id="referral" value={form.referral_source} onChange={e=>set('referral_source',e.target.value)}/></div>
+    <label className="flex gap-3 text-sm"><input required type="checkbox" checked={form.consent} onChange={e=>set('consent',e.target.checked)} className="mt-1"/><span>I confirm that the information supplied is accurate and consent to its use for programme selection, administration and communication in accordance with the programme privacy notice and terms.</span></label>
+   </CardContent></Card>
+   {error&&<p className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">{error}</p>}
+   <div className="flex flex-wrap items-center gap-3"><Button disabled={busy} type="submit" size="lg">{busy?'Submitting…':'Submit application'}</Button><p className="text-xs text-muted-foreground">Do not submit more than once with the same email address.</p></div>
+  </form>
+ </div>
+}

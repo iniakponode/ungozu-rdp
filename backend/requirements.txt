@@ -1,0 +1,49 @@
+# FastAPI and core
+fastapi>=0.141.1
+starlette>=1.3.1
+uvicorn[standard]>=0.32.0
+pydantic[email]>=2.9.0
+pydantic-settings>=2.14.2
+anyio>=4.14.2
+click>=8.3.3
+
+# Database
+sqlalchemy[asyncio]>=2.0.36
+alembic>=1.14.0
+pymysql>=1.1.1
+aiomysql>=0.2.0
+cryptography>=50.0.0
+Mako>=1.3.12
+
+# Auth
+PyJWT[crypto]>=2.15.0
+bcrypt>=4.0.0
+python-multipart>=0.0.31
+
+# HTTP client (for Add-by-URL metadata fetch in Phase 8)
+httpx>=0.28.0
+beautifulsoup4>=4.12.0
+lxml>=6.1.0
+soupsieve>=2.9.0
+idna>=3.15
+
+# Email
+aiosmtplib>=5.1.2
+
+# Utilities
+python-slugify>=8.0.4
+python-dateutil>=2.9.0
+pillow>=12.3.0
+
+# Security - Rate limiting
+slowapi>=0.1.9
+
+# File type detection by magic bytes
+# On Linux: apt-get install libmagic1
+# On Windows: pip install python-magic-bin (auto-detected)
+python-magic>=0.4.27
+
+# Development
+ruff>=0.8.0
+pytest>=8.0.0
+pytest-asyncio>=0.24.0
