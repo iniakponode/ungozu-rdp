@@ -20,6 +20,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { PasswordInput } from '@/components/ui/password-input'
 import { Label } from '@/components/ui/label'
 import { toast } from 'sonner'
 
@@ -115,7 +116,7 @@ function ProviderCard({config,onSaved}:{config:RDPPaymentProviderConfig;onSaved:
         <div><Label>Webhook URL</Label><Input readOnly value={config.webhook_url} className="mt-2 font-mono text-xs"/></div>
         <div><Label>Callback URL</Label><Input readOnly value={config.callback_url} className="mt-2 font-mono text-xs"/></div>
       </div>
-      {config.environment==='live'&&<div className="space-y-2 rounded-md border border-amber-500/40 bg-amber-500/5 p-4"><Label>Administrator password</Label><Input type="password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="Required for LIVE changes"/><p className="text-xs text-muted-foreground">Live credential changes require re-authentication.</p></div>}
+      {config.environment==='live'&&<div className="space-y-2 rounded-md border border-amber-500/40 bg-amber-500/5 p-4"><Label>Administrator password</Label><PasswordInput autoComplete="current-password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="Required for LIVE changes"/><p className="text-xs text-muted-foreground">Live credential changes require re-authentication.</p></div>}
       <label className="flex items-start gap-3 rounded-md border p-4 text-sm"><input type="checkbox" className="mt-1" checked={enabled} onChange={e=>setEnabled(e.target.checked)}/><span><b>Enable {config.display_name} in {config.environment.toUpperCase()}</b><br/><span className="text-xs text-muted-foreground">Only enabled providers with valid credentials and a matching invoice currency are offered to participants.</span></span></label>
       <div className="flex flex-wrap gap-2"><Button onClick={save} disabled={busy}>{busy?'Saving…':'Save configuration'}</Button><Button variant="outline" onClick={test} disabled={testing||!config.secret_configured}>{testing?<><RefreshCw className="mr-2 h-4 w-4 animate-spin"/>Testing…</>:'Test connection'}</Button></div>
     </CardContent>
@@ -161,7 +162,7 @@ export default function PaymentSettingsPage(){
     <Card><CardHeader><CardTitle className="flex items-center gap-2"><ShieldCheck className="h-5 w-5"/>Platform controls</CardTitle></CardHeader><CardContent className="grid gap-5 md:grid-cols-2">
       <div className="space-y-2"><Label>Active payment environment</Label><select className="h-10 w-full rounded-md border bg-background px-3 text-sm" value={activeEnvironment} onChange={e=>setActiveEnvironment(e.target.value as Environment)}><option value="test">TEST — no real money</option><option value="live">LIVE — real payments</option></select><p className="text-xs text-muted-foreground">The participant checkout only uses providers configured in this environment.</p></div>
       <label className="flex items-start gap-3 rounded-md border p-4 text-sm"><input type="checkbox" className="mt-1" checked={allowSelection} onChange={e=>setAllowSelection(e.target.checked)}/><span><b>Allow participant to choose provider</b><br/><span className="text-xs text-muted-foreground">If disabled, the eligible provider with the lowest routing priority is selected automatically.</span></span></label>
-      {activeEnvironment==='live'&&settings?.active_environment!=='live'&&<div className="space-y-2 md:col-span-2"><Label>Administrator password</Label><Input type="password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="Required to switch TEST → LIVE"/></div>}
+      {activeEnvironment==='live'&&settings?.active_environment!=='live'&&<div className="space-y-2 md:col-span-2"><Label>Administrator password</Label><PasswordInput autoComplete="current-password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="Required to switch TEST → LIVE"/></div>}
       <div className="md:col-span-2"><Button onClick={savePlatform} disabled={savingPlatform}>{savingPlatform?'Saving…':'Save platform settings'}</Button></div>
     </CardContent></Card>
 
