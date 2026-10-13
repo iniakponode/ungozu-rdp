@@ -13,6 +13,15 @@ class RDPCohort(Base, TimestampMixin):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     slug: Mapped[str] = mapped_column(String(255), nullable=False, unique=True, index=True)
+    programme_version_id: Mapped[int | None] = mapped_column(
+        Integer,
+        ForeignKey(
+            "rdp_programme_versions.id",
+            ondelete="RESTRICT",
+        ),
+        nullable=True,
+        index=True,
+    )
     label: Mapped[str] = mapped_column(String(255), nullable=False)
     application_open_date: Mapped[date] = mapped_column(Date, nullable=False)
     application_deadline: Mapped[date] = mapped_column(Date, nullable=False)
