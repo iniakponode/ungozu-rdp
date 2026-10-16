@@ -11,3 +11,27 @@ __pycache__/
 *.pyc
 *.log
 .DS_Store
+
+# Ungozu RDP development backups
+/.milestone_*_backups/
+/.ungozu_*_backups/
+
+# Temporary acceptance and hotfix packages
+/Ungozu_RDP_Automated_Acceptance/
+/Ungozu_RDP_Browser_Acceptance_Hotfix_*/
+/Ungozu_RDP_*.zip
+
+# Local test databases backups and reports
+/backend/test_backups/
+/backend/test_reports/
+
+# Playwright output
+/frontend/test-results/
+/frontend/playwright-report/
+
+# Generated TypeScript build caches
+*.tsbuildinfo
+
+# Root-level exported test diagnostics
+/error-context.md
+/trace.zip

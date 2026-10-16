@@ -1,19 +1,24 @@
-'use client'
-import { useEffect, useState } from 'react'
+import type { Metadata } from 'next'
 import Link from 'next/link'
-import { getRdpCohort, type Cohort } from '@/lib/rdp-api'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { formatMoney, RDPSectionHeading } from '@/components/rdp/rdp-ui'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { RDPSectionHeading } from '@/components/rdp/rdp-ui'
+import { publishedCatalogues } from '@/lib/rdp-public-server'
+import { catalogueTitle, chooseCatalogue, cohortLink, money } from '@/lib/rdp-catalogue'
 
-export default function FeesPage(){
- const [cohort,setCohort]=useState<Cohort|null>(null)
- useEffect(()=>{getRdpCohort().then(setCohort).catch(()=>{})},[])
- const fees=cohort?.fee_plans ?? []
+export const metadata: Metadata = {title:'Packages and fees | Ungozu R & D'}
+
+export default async function FeesPage({searchParams}:{searchParams:Promise<{cohort?:string}>}){
+ const catalogues=await publishedCatalogues()
+ const c=chooseCatalogue(catalogues,(await searchParams).cohort)
+ const packages=new Map(c?.packages.map(p=>[p.id,p])??[])
  return <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
-  <RDPSectionHeading eyebrow="Fees & access" title="Founding-cohort fee options" text="The fee supports a year of structured development, cohort learning, mentoring, quarterly reviews, research-development resources and programme administration. Scholarship/subsidised places are considered separately."/>
-  <div className="mt-8 grid gap-5 md:grid-cols-2 lg:grid-cols-3">{fees.length?fees.map(f=><Card key={f.id}><CardHeader><p className="text-xs font-semibold uppercase tracking-wider text-primary">{f.region.replaceAll('_',' ')}</p><CardTitle className="text-base">{f.name}</CardTitle></CardHeader><CardContent><p className="text-3xl font-semibold">{formatMoney(f.total_amount_subunit,f.currency)}</p><p className="mt-2 text-sm text-muted-foreground">{f.description}</p>{f.installment_count>1&&<p className="mt-3 text-xs text-muted-foreground">{f.installment_count} instalments · {formatMoney(f.installment_amount_subunit,f.currency)} nominal instalment</p>}</CardContent></Card>):<p className="text-sm text-muted-foreground">Fee plans are loading from the programme system.</p>}</div>
-  <div className="mt-10 grid gap-6 lg:grid-cols-2"><Card><CardHeader><CardTitle>Scholarship and subsidised places</CardTitle></CardHeader><CardContent className="space-y-3 text-sm leading-6 text-muted-foreground"><p>Applicants with genuine financial constraints may request a full or partial scholarship/subsidised place. Awards are limited and are assessed separately from academic/programme fit.</p><p>Requesting support does not guarantee an award, and approved support is reflected in the applicant’s invoice before payment begins.</p></CardContent></Card><Card><CardHeader><CardTitle>What is not included</CardTitle></CardHeader><CardContent className="text-sm leading-6 text-muted-foreground">The programme does not guarantee publication, grants, employment or admissions; and it does not include unlimited manuscript editing, ghost-writing, or doing a participant’s research/analysis on their behalf.</CardContent></Card></div>
-  <div className="mt-8 flex flex-wrap gap-3"><Button asChild><Link href="/apply">Apply for the programme</Link></Button><Button asChild variant="outline"><Link href="/faq">Read FAQs</Link></Button></div>
+ <RDPSectionHeading eyebrow="Fees and access" title={c?`Packages and fees — ${catalogueTitle(c)}`:'Published programme fees'} text="All prices and instalment schedules below are supplied by the current published cohort configuration. Scholarship requests are reviewed separately."/>
+ {catalogues.length>1&&<nav aria-label="Choose cohort" className="mt-6 flex flex-wrap gap-2">{catalogues.map(x=><Button asChild size="sm" variant={c?.cohort.id===x.cohort.id?'default':'outline'} key={x.cohort.id}><Link href={cohortLink('/fees',x.cohort.slug)}>{x.cohort.label}</Link></Button>)}</nav>}
+ {!c?<p className="mt-8 rounded-lg border p-6 text-sm text-muted-foreground">No published fee schedules are currently available.</p>:<>
+ <div className="mt-8 grid gap-5 md:grid-cols-2 lg:grid-cols-3">{c.fee_plans.length?c.fee_plans.map(f=><Card key={f.id}><CardHeader><p className="text-xs font-semibold uppercase tracking-wider text-primary">{f.region.replaceAll('_',' ')}</p><CardTitle>{f.name}</CardTitle></CardHeader><CardContent><p className="text-3xl font-semibold">{money(f.total_amount_subunit,f.currency)}</p>{f.description&&<p className="mt-2 text-sm text-muted-foreground">{f.description}</p>}{f.package_id!=null&&packages.has(f.package_id)&&<div className="mt-4 text-sm"><p className="font-semibold">{packages.get(f.package_id)?.name}</p><ul className="mt-1 list-disc pl-5 text-muted-foreground">{packages.get(f.package_id)?.entitlements.map(e=><li key={e.code}>{e.name}{e.quantity!==null?` · ${e.quantity} ${e.unit??''}`:''}</li>)}</ul></div>}{f.installments.length>0&&<div className="mt-4 text-sm"><p className="font-medium">Instalment schedule</p><ul className="mt-2 space-y-1 text-muted-foreground">{f.installments.map(x=><li key={x.sequence_number}>{x.sequence_number}. {money(x.amount_subunit,f.currency)} · {x.due_offset_days===0?'due on activation':`due offset ${x.due_offset_days} day(s)`}</li>)}</ul></div>}</CardContent></Card>):<p className="text-sm text-muted-foreground">No currently available fee plans for this cohort.</p>}</div>
+ <div className="mt-8 flex flex-wrap gap-3">{c.accepting_applications&&<Button asChild><Link href={cohortLink('/apply',c.cohort.slug)}>Apply for this cohort</Link></Button>}<Button asChild variant="outline"><Link href={cohortLink('/programme',c.cohort.slug)}>View curriculum</Link></Button></div>
+ </>}
+ <div className="mt-10 rounded-xl border p-6 text-sm leading-6 text-muted-foreground">Applications for financial assistance are assessed separately. Programme fees do not guarantee publication, grant awards or employment, and do not include ghost-writing or outsourced research.</div>
  </div>
 }

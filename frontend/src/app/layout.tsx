@@ -4,7 +4,7 @@ import { Toaster } from 'sonner'
 import './globals.css'
 export const metadata: Metadata = {
   title:{default:'Ungozu R & D Researcher Development Programme',template:'%s | Ungozu R & D'},
-  description:'12-month early career researcher mentoring, capacity building and career development programme.',
+  description:'Configurable early-career researcher mentoring, capacity building and career development programmes.',
   metadataBase:new URL(process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3010'),
   robots:{index:true,follow:true},
 }

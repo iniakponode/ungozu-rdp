@@ -33,6 +33,8 @@ aiosmtplib>=5.1.2
 # Utilities
 python-slugify>=8.0.4
 python-dateutil>=2.9.0
+# IANA time-zone data for Windows and minimal Linux environments
+tzdata>=2026.5
 pillow>=12.3.0
 
 # Security - Rate limiting

@@ -36,6 +36,6 @@ async def get_current_rdp_mentee(current_user: Annotated[User, Depends(get_curre
     try: token_type = decode_access_token(token).get('type')
     except JWTError: token_type = None
     if token_type != 'rdp_access': raise HTTPException(status_code=403, detail='Programme participant access required.')
-    enrollment_id = (await db.execute(select(RDPEnrollment.id).where(RDPEnrollment.user_id == current_user.id, RDPEnrollment.status.in_(['active_payment_plan','active_paid','completed'])))).scalar_one_or_none()
+    enrollment_id = (await db.execute(select(RDPEnrollment.id).where(RDPEnrollment.user_id == current_user.id, RDPEnrollment.status.in_(['active_payment_plan','active_paid','completed'])).order_by(RDPEnrollment.id.desc()).limit(1))).scalars().first()
     if enrollment_id is None: raise HTTPException(status_code=403, detail='Programme participant access required.')
     return current_user

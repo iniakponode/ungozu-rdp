@@ -36,12 +36,18 @@ def payment_reference(invoice_id: int) -> str:
 
 
 async def get_public_cohort(db: AsyncSession, slug: str | None = None) -> RDPCohort | None:
-    stmt = select(RDPCohort).where(RDPCohort.is_published.is_(True))
+    """Resolve a public cohort without leaking draft Programme Builder versions.
+
+    Historical legacy published cohorts remain supported. If no slug is supplied,
+    prefer an open/current application cohort, otherwise an upcoming published
+    cohort, rather than assuming cohort ID 1.
+    """
+    from app.api.v1.endpoints.rdp_catalogue import published_cohorts, accepts
+
+    cohorts = await published_cohorts(db)
     if slug:
-        stmt = stmt.where(RDPCohort.slug == slug)
-    else:
-        stmt = stmt.order_by(RDPCohort.start_date.desc())
-    return (await db.execute(stmt)).scalars().first()
+        return next((c for c in cohorts if c.slug == slug), None)
+    return next((c for c in cohorts if accepts(c)), None) or (cohorts[0] if cohorts else None)
 
 
 async def get_application_by_ref(db: AsyncSession, ref: str) -> RDPApplication | None:
@@ -117,14 +123,16 @@ async def recalculate_unpaid_invoices(db: AsyncSession, application: RDPApplicat
     return list(invoices)
 
 
-async def send_application_confirmation(application: RDPApplication, access_token: str) -> bool:
+async def send_application_confirmation(application: RDPApplication, access_token: str, *, cohort_label: str | None = None) -> bool:
     status_link = f"{settings.FRONTEND_URL.rstrip('/')}/status?ref={application.application_ref}&token={access_token}"
+    from html import escape
+    cohort_text = f" for {escape(cohort_label)}" if cohort_label else ""
     return await send_email(
         to=application.email,
         subject=f"Application received — {application.application_ref}",
         html_body=(
             f"<p>Hello {application.full_name},</p>"
-            "<p>We have received your application to the Ungozu R & D Researcher Development Programme.</p>"
+            f"<p>We have received your application{cohort_text} to the Ungozu R & D researcher-development programme.</p>"
             f"<p><strong>Application reference:</strong> {application.application_ref}</p>"
             f'<p><a href="{status_link}">View application status</a></p>'
             "<p>Keep this link private; it provides access to your application status.</p>"
@@ -136,14 +144,30 @@ async def send_application_confirmation(application: RDPApplication, access_toke
     )
 
 
-async def send_decision_email(application: RDPApplication, *, payment_token: str | None = None) -> bool:
+async def send_decision_email(application: RDPApplication, *, payment_token: str | None = None, cohort_label: str | None = None) -> bool:
+    from html import escape
+    cohort_text = escape(cohort_label) if cohort_label else "your selected cohort"
     if application.status in {"accepted", "payment_due"} and payment_token:
         link = f"{settings.FRONTEND_URL.rstrip('/')}/payment?ref={application.application_ref}&token={payment_token}"
         subject = "Admission offer — Ungozu R & D Researcher Development Programme"
         body = (
             f"<p>Hello {application.full_name},</p>"
-            "<p>Congratulations. You have been offered a place in the Founding Cohort of the Ungozu R & D Researcher Development Programme.</p>"
+            f"<p>Congratulations. You have been offered a place in {cohort_text} of the Ungozu R & D Researcher Development Programme.</p>"
             f'<p><a href="{link}">Review your fee plan and make payment</a></p>'
+        )
+    elif application.status == "quote_offered":
+        subject = (
+            "Admission offer - Ungozu R & D "
+            "Researcher Development Programme"
+        )
+        body = (
+            f"<p>Hello {application.full_name},</p>"
+            f"<p>Congratulations. Your application for {cohort_text} has been approved "
+            "and a programme fee quotation has been issued.</p>"
+            "<p>You will receive separate instructions for reviewing "
+            "and accepting your quotation.</p>"
+            "<p>Please do not make payment until you have accepted "
+            "the quotation and received official payment instructions.</p>"
         )
     elif application.status == "shortlisted":
         subject = "Application shortlisted — Ungozu R & D Researcher Development Programme"

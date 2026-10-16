@@ -44,6 +44,13 @@ class RDPFeePlan(Base, TimestampMixin):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     cohort_id: Mapped[int] = mapped_column(Integer, ForeignKey("rdp_cohorts.id", ondelete="CASCADE"), nullable=False, index=True)
+    package_id: Mapped[int | None] = mapped_column(
+        Integer,
+        ForeignKey("rdp_packages.id", ondelete="RESTRICT"),
+        nullable=True,
+        index=True,
+    )
+
     code: Mapped[str] = mapped_column(String(80), nullable=False)
     region: Mapped[str] = mapped_column(String(80), nullable=False)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
