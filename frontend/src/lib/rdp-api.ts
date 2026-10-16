@@ -1,3 +1,4 @@
+import type { Catalogue } from './rdp-catalogue'
 export type FeePlan = { id:number; code:string; region:string; name:string; currency:string; total_amount_subunit:number; installment_count:number; installment_amount_subunit:number; description?:string|null; is_active:boolean }
 export type Cohort = { id:number; name:string; slug:string; label:string; application_open_date:string; application_deadline:string; start_date:string; graduation_date:string; end_date:string; capacity:number; status:string; public_summary?:string|null; fee_plans:FeePlan[] }
 export type Invoice = { id:number; sequence:number; amount_subunit:number; currency:string; due_date?:string|null; status:string; paid_at?:string|null }
@@ -21,3 +22,5 @@ export const initRdpPayment = (data:{application_ref:string;payment_token:string
 export const setRdpPassword = (token:string,new_password:string) => pub<{message:string}>('/set-password',{method:'POST',body:JSON.stringify({token,new_password})})
 
 export const requestRdpPasswordReset = (email:string) => pub<{message:string}>('/password-reset/request',{method:'POST',body:JSON.stringify({email})})
+
+export const getRdpCatalogues=()=>pub<Catalogue[]>('/catalogue')

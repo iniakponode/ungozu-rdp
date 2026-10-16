@@ -36,7 +36,7 @@ class RDPCohortOut(BaseModel):
 
 
 class RDPApplicationCreate(BaseModel):
-    cohort_slug: str = "founding-cohort-2026-2027"
+    cohort_slug: str | None = None
     full_name: str = Field(min_length=2, max_length=255)
     email: EmailStr
     country: str = Field(min_length=2, max_length=120)
