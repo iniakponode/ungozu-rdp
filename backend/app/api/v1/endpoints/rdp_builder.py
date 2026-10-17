@@ -43,7 +43,7 @@ class VersionIn(BaseModel):
     title: str = Field(min_length=2, max_length=255)
     overview: str | None = None
     duration_value: int = Field(ge=1, le=120)
-    duration_unit: Literal["weeks", "months", "years"] = "months"
+    duration_unit: Literal["days", "weeks", "months", "years"] = "months"
     learning_outcomes: str | None = None
 
 
