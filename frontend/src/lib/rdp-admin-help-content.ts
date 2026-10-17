@@ -26,6 +26,10 @@ export const adminHelpSections:HelpSection[] = [
       },
       {
         "kind": "bullet",
+        "text": "To clone cohort and pricing: select a published target programme version in Programme Builder, then use Clone cohort & pricing. Choose an existing versioned source cohort, provide a new unique slug and all new dates, and review the copied fees. Every copied fee plan is INACTIVE until individually checked and enabled. Publish the new cohort only after checking prices and instalment schedules. Existing applications, payment records and certificates are never copied."
+      },
+      {
+        "kind": "bullet",
         "text": "Administrator changes are not a sandbox. Plan/fee changes, publication, admissions and certificate revocation can affect real applicants or immutable financial records."
       },
       {

@@ -549,3 +549,87 @@ async def update_fee_plan(id: int, payload: FeePlanIn, db: Db, admin: Admin):
     await apply_schedule(db, plan, payload, replace=True)
     await write(db)
     return as_dict(plan, FEE_FIELDS)
+
+@router.post('/cohorts/{source_id}/clone', status_code=201)
+async def clone_cohort_with_pricing(source_id: int, payload: CohortIn, db: Db, admin: Admin):
+    """Copy validated fee schedules to an unpublished, financially disabled draft.
+
+    Never clones applications, enrolments, quotations, invoices or payments.
+    Fee-plan/package foreign keys are remapped by immutable package code.
+    This route writes only after validating every fee plan and instalment.
+    """
+    from collections import defaultdict
+    from app.services.rdp_cohort_clone_plan import plan_cohort_fee_clone
+
+    source = await one(db, RDPCohort, source_id, locked=True)
+    if source.programme_version_id is None:
+        raise HTTPException(409, 'Legacy cohorts cannot be cloned with versioned pricing')
+    target_version = await one(db, RDPProgrammeVersion, payload.programme_version_id)
+    if target_version.status != 'published':
+        raise HTTPException(422, 'Publish the target programme version before cloning a cohort into it')
+    existing_slug = (await db.execute(select(RDPCohort.id).where(RDPCohort.slug == payload.slug))).scalar_one_or_none()
+    if existing_slug is not None:
+        raise HTTPException(409, 'This cohort slug is already in use; enter a new unique slug')
+
+    source_plans = (await db.execute(select(RDPFeePlan).where(
+        RDPFeePlan.cohort_id == source.id,
+    ).order_by(RDPFeePlan.sort_order, RDPFeePlan.id).with_for_update())).scalars().all()
+    source_packages = (await db.execute(select(RDPPackage).where(
+        RDPPackage.programme_version_id == source.programme_version_id,
+    ))).scalars().all()
+    target_packages = (await db.execute(select(RDPPackage).where(
+        RDPPackage.programme_version_id == target_version.id,
+    ))).scalars().all()
+    source_ids = [x.id for x in source_plans]
+    lines = (await db.execute(select(RDPFeePlanInstallment).where(
+        RDPFeePlanInstallment.fee_plan_id.in_(source_ids),
+    ).order_by(RDPFeePlanInstallment.fee_plan_id, RDPFeePlanInstallment.sequence_number))).scalars().all() if source_ids else []
+    lines_by_plan = defaultdict(list)
+    for line in lines:
+        lines_by_plan[line.fee_plan_id].append(line)
+
+    try:
+        clone_plan = plan_cohort_fee_clone(
+            source_plans, lines_by_plan,
+            {p.id: p for p in source_packages},
+            {p.code: p for p in target_packages},
+        )
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
+
+    # All source records have been validated. Create one atomic draft.
+    try:
+        cloned = RDPCohort(**values(payload), status='draft', is_published=False)
+        db.add(cloned)
+        await db.flush()
+        for plan in clone_plan:
+            fee = RDPFeePlan(
+                cohort_id=cloned.id, package_id=plan.target_package_id,
+                code=plan.code, region=plan.region, name=plan.name,
+                currency=plan.currency, total_amount_subunit=plan.total_amount_subunit,
+                installment_count=len(plan.installments),
+                installment_amount_subunit=plan.installments[0].amount_subunit,
+                description=plan.description, sort_order=plan.sort_order,
+                is_active=False,  # Deliberate: new financial terms require review.
+            )
+            db.add(fee)
+            await db.flush()
+            for line, description in zip(plan.installments, plan.installment_descriptions):
+                db.add(RDPFeePlanInstallment(
+                    fee_plan_id=fee.id, sequence_number=line.sequence_number,
+                    amount_subunit=line.amount_subunit,
+                    due_offset_days=line.due_offset_days, description=description,
+                ))
+        await write(db)
+    except IntegrityError as exc:
+        await db.rollback()
+        raise HTTPException(409, 'Clone conflict (possibly a duplicate cohort slug); no draft was created') from exc
+    except Exception:
+        await db.rollback()
+        raise
+
+    return {
+        'cohort': as_dict(cloned, COHORT_FIELDS),
+        'copied_fee_plans': len(clone_plan),
+        'fee_plans_need_activation': True,
+    }
