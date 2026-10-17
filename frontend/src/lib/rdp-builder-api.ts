@@ -1,3 +1,4 @@
+import { apiErrorFromResponse } from './api-errors'
 /** Admin-only Programme Builder API. Proxied through the existing authenticated BFF. */
 export type Programme = { id:number;name:string;slug:string;category:string|null;description:string|null;status:string;is_published:boolean }
 export type Version = { id:number;programme_id:number;version_number:number;title:string;overview:string|null;duration_value:number;duration_unit:string;learning_outcomes:string|null;status:string;published_at:string|null }
@@ -12,7 +13,7 @@ export type BuilderData = {programmes:Programme[];versions:Version[];modules:Mod
 const base='/api/rdp-admin/builder'
 export async function builderApi<T>(path:string, method:'GET'|'POST'|'PUT'='GET', body?:unknown):Promise<T>{
  const r=await fetch(base+path,{method,headers:{'Content-Type':'application/json'},body:body===undefined?undefined:JSON.stringify(body),cache:'no-store'})
- if(!r.ok){let detail='';try { const d=await r.json();detail=typeof d.detail==='string'?d.detail:JSON.stringify(d.detail||d) }catch{detail=await r.text().catch(()=>'')};throw new Error(detail||`Request failed (${r.status})`)}
+ if(!r.ok)throw await apiErrorFromResponse(r)
  return r.json() as Promise<T>
 }
 export const fetchBuilder=()=>builderApi<BuilderData>('/overview')

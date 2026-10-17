@@ -1,0 +1,30 @@
+// Dependency: the repository's existing TypeScript dev dependency.
+const assert = require('node:assert/strict')
+const fs = require('node:fs')
+const path = require('node:path')
+const ts = require('typescript')
+const source = fs.readFileSync(path.resolve(__dirname, '../src/lib/api-errors.ts'), 'utf8')
+const js = ts.transpileModule(source, {compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020}}).outputText
+const moduleHolder = {exports:{}}
+new Function('module', 'exports', js)(moduleHolder, moduleHolder.exports)
+const { apiErrorFromResponse, userErrorMessage } = moduleHolder.exports
+const response = (status, json) => new Response(JSON.stringify(json), {status,headers:{'content-type':'application/json'}})
+;(async()=>{
+ const validation=await apiErrorFromResponse(response(422,{detail:[{loc:['body','cohort','deadline'],msg:'Must precede start date',type:'value_error'},{loc:['body','price'],msg:'Must be positive'}]}))
+ assert.match(validation.message,/cohort → deadline: Must precede start date/)
+ assert.match(validation.message,/price: Must be positive/)
+ assert.doesNotMatch(validation.message,/\{\s*"detail"/)
+ assert.deepEqual(validation.fieldErrors.length,2)
+ const conflict=await apiErrorFromResponse(response(409,{detail:'Programme version has already been published'}))
+ assert.match(conflict.message,/already been published/)
+ const object=await apiErrorFromResponse(response(422,{detail:{message:'Completion prerequisites not satisfied',blockers:['Criterion missing']}}))
+ assert.match(object.message,/Completion prerequisites/)
+ assert.match(object.message,/Criterion missing/)
+ const protectedError=await apiErrorFromResponse(response(500,{detail:'Traceback: DATABASE_PASSWORD=secret'}))
+ assert.doesNotMatch(protectedError.message,/DATABASE_PASSWORD/)
+ const expired=await apiErrorFromResponse(response(401,{detail:'Not authenticated'}))
+ assert.match(expired.message,/sign in again/)
+ const nested=new Error(JSON.stringify({detail:[{loc:['body','capacity'],msg:'Too small'}]}))
+ assert.match(userErrorMessage(nested),/capacity: Too small/)
+ console.log('PASS: FastAPI/Next.js JSON error formatting, field validation, safe server failures')
+})().catch(error=>{console.error(error);process.exitCode=1})

@@ -1,4 +1,5 @@
 'use client'
+import { userErrorMessage } from '@/lib/api-errors'
 import { CompletionPortal } from '@/components/rdp/completion-portal'
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -19,14 +20,14 @@ const checkFields:[CheckTextKey,string][]=[['progress_summary','Progress summary
 
 export default function RDPPortalPage(){
  const router=useRouter();const [enrollments,setEnrollments]=useState<PortalEnrollment[]>([]),[selectedEnrollment,setSelectedEnrollment]=useState<number|null>(null),[catalogue,setCatalogue]=useState<(Catalogue & {enrolled_package_id:number|null;enrolled_fee_plan_id:number|null})|null>(null),[data,setData]=useState<PortalDashboard|null>(null),[plan,setPlan]=useState<Partial<DevelopmentPlan>>({}),[month,setMonth]=useState(1),[check,setCheck]=useState<Partial<CheckIn>>({}),[error,setError]=useState('')
- async function load(){if(selectedEnrollment===null)return;try{const [d,c]=await Promise.all([getRdpPortalDashboard(selectedEnrollment),getRdpPortalCatalogue(selectedEnrollment).catch(()=>null)]);setData(d);setCatalogue(c);setPlan(d.development_plan??{});const currentCheckin=d.checkins.find(x=>x.month_number===month);setCheck(currentCheckin??{})}catch(e){setError(e instanceof Error?e.message:'Could not load portal')}}
- useEffect(()=>{getRdpPortalEnrollments().then(e=>{setEnrollments(e);setSelectedEnrollment(e[0]?.id??null)}).catch(e=>setError(e instanceof Error?e.message:'Could not load enrolments'))},[])
+ async function load(){if(selectedEnrollment===null)return;try{const [d,c]=await Promise.all([getRdpPortalDashboard(selectedEnrollment),getRdpPortalCatalogue(selectedEnrollment).catch(()=>null)]);setData(d);setCatalogue(c);setPlan(d.development_plan??{});const currentCheckin=d.checkins.find(x=>x.month_number===month);setCheck(currentCheckin??{})}catch(e){setError(userErrorMessage(e,'Could not load portal'))}}
+ useEffect(()=>{getRdpPortalEnrollments().then(e=>{setEnrollments(e);setSelectedEnrollment(e[0]?.id??null)}).catch(e=>setError(userErrorMessage(e,'Could not load enrolments')))},[])
  useEffect(()=>{if(selectedEnrollment!==null){setData(null);void load()}},[selectedEnrollment])
  useEffect(()=>{if(data){setCheck(data.checkins.find(x=>x.month_number===month)??{})}},[month,data])
- const checkinLimit=catalogue?.version?.duration_unit==='months'?Math.max(1,catalogue.version.duration_value):12
+ const checkinLimit=(()=>{const v=catalogue?.version;if(!v)return 12;switch(v.duration_unit){case 'months':return Math.max(1,v.duration_value);case 'days':return Math.max(1,Math.ceil(v.duration_value/30));case 'weeks':return Math.max(1,Math.ceil(v.duration_value*7/30));case 'years':return Math.max(1,v.duration_value*12);default:return 12}})()
  const paid=useMemo(()=>data?.invoices.filter(i=>i.status==='paid').reduce((s,i)=>s+i.amount_subunit,0)??0,[data])
- async function savePlan(){try{const r=await updateRdpDevelopmentPlan({...plan,status:'submitted'},selectedEnrollment??undefined);setPlan(r);toast.success('Development plan saved')}catch(e){toast.error(e instanceof Error?e.message:'Could not save plan')}}
- async function saveCheck(submit=false){try{const r=await updateRdpCheckIn(month,{...check,status:submit?'submitted':'draft'},selectedEnrollment??undefined);setCheck(r);toast.success(submit?'Monthly check-in submitted':'Draft saved');await load()}catch(e){toast.error(e instanceof Error?e.message:'Could not save check-in')}}
+ async function savePlan(){try{const r=await updateRdpDevelopmentPlan({...plan,status:'submitted'},selectedEnrollment??undefined);setPlan(r);toast.success('Development plan saved')}catch(e){toast.error(userErrorMessage(e,'Could not save plan'))}}
+ async function saveCheck(submit=false){try{const r=await updateRdpCheckIn(month,{...check,status:submit?'submitted':'draft'},selectedEnrollment??undefined);setCheck(r);toast.success(submit?'Monthly check-in submitted':'Draft saved');await load()}catch(e){toast.error(userErrorMessage(e,'Could not save check-in'))}}
  async function logout(){await fetch('/api/auth/rdp-logout',{method:'POST'});router.push('/login');router.refresh()}
  if(error)return <div className="mx-auto max-w-3xl px-4 py-16 sm:px-6"><Card><CardContent className="pt-6"><p className="text-sm text-destructive">{error}</p><div className="mt-4 flex gap-3"><Button onClick={()=>router.push('/login')}>Sign in</Button><Button variant="outline" onClick={()=>location.reload()}>Retry</Button></div></CardContent></Card></div>
  if(!data)return <div className="mx-auto max-w-7xl px-4 py-16 text-sm text-muted-foreground sm:px-6 lg:px-8">Loading participant portal…</div>
