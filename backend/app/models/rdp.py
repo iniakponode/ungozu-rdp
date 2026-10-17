@@ -88,6 +88,9 @@ class RDPApplication(Base, TimestampMixin):
     referral_source: Mapped[str | None] = mapped_column(String(255), nullable=True)
     status: Mapped[str] = mapped_column(String(50), nullable=False, default="submitted", index=True)
     fee_plan_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("rdp_fee_plans.id", ondelete="SET NULL"), nullable=True)
+    # Applicant preference only: never a reservation, invoice or approved price.
+    preferred_package_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("rdp_packages.id", ondelete="SET NULL"), nullable=True, index=True)
+    preferred_fee_plan_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("rdp_fee_plans.id", ondelete="SET NULL"), nullable=True, index=True)
     acceptance_deadline: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     admission_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     submitted_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)

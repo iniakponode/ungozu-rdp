@@ -37,6 +37,9 @@ class RDPCohortOut(BaseModel):
 
 class RDPApplicationCreate(BaseModel):
     cohort_slug: str | None = None
+    # Both fields are optional for existing API consumers and legacy cohorts.
+    preferred_package_id: int | None = Field(default=None, gt=0)
+    preferred_fee_plan_id: int | None = Field(default=None, gt=0)
     full_name: str = Field(min_length=2, max_length=255)
     email: EmailStr
     country: str = Field(min_length=2, max_length=120)
@@ -51,6 +54,12 @@ class RDPApplicationCreate(BaseModel):
     scholarship_interest: bool = False
     referral_source: str | None = Field(default=None, max_length=255)
     consent: bool
+
+    @model_validator(mode="after")
+    def preference_pair(self):
+        if (self.preferred_package_id is None) != (self.preferred_fee_plan_id is None):
+            raise ValueError("Select a package and its payment plan together")
+        return self
 
     @model_validator(mode="after")
     def consent_required(self):
@@ -182,6 +191,8 @@ class RDPPaymentInitResponse(BaseModel):
 
 
 class RDPApplicationAdminOut(BaseModel):
+    preferred_package_id: int | None = None
+    preferred_fee_plan_id: int | None = None
     id: int
     cohort_id: int
     application_ref: str

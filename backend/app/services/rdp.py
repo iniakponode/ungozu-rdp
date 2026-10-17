@@ -164,10 +164,12 @@ async def send_decision_email(application: RDPApplication, *, payment_token: str
             f"<p>Hello {application.full_name},</p>"
             f"<p>Congratulations. Your application for {cohort_text} has been approved "
             "and a programme fee quotation has been issued.</p>"
-            "<p>You will receive separate instructions for reviewing "
-            "and accepting your quotation.</p>"
-            "<p>Please do not make payment until you have accepted "
-            "the quotation and received official payment instructions.</p>"
+            "<p>To review and accept your quotation, open the private application-status link "
+            "in the confirmation email you received when you applied. The quotation shows "
+            "your mentoring package, fees, scholarship support (if any) and payment schedule.</p>"
+            "<p>After you accept the quotation, you can proceed to secure payment. "
+            "Do not make payment before accepting the quotation.</p>"
+            "<p>If you cannot find your original status link, contact the programme team.</p>"
         )
     elif application.status == "shortlisted":
         subject = "Application shortlisted — Ungozu R & D Researcher Development Programme"
