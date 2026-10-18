@@ -65,7 +65,9 @@ test('Applicant reviews, explicitly accepts and reaches payment without payment 
   await expect(page.getByText('Review your programme quotation')).toBeVisible()
   await expect(page.getByText('Research masterclasses')).toBeVisible()
   await expect(page.getByText('Excluded item')).toHaveCount(0)
-  await expect(page.getByText('Standard', {exact: true})).toBeVisible()
+  await expect(
+  page.locator('#quotation-review').getByText('Package: Standard', { exact: true })
+).toBeVisible()
   await expect(page.getByText(/140,000/).first()).toBeVisible()
   await expect(page.getByText('Instalment 1')).toBeVisible()
   const accept = page.getByRole('button',{name:'Accept quotation and continue to payment'})
