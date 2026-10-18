@@ -25,3 +25,42 @@ export const setRdpPassword = (token:string,new_password:string) => pub<{message
 export const requestRdpPasswordReset = (email:string) => pub<{message:string}>('/password-reset/request',{method:'POST',body:JSON.stringify({email})})
 
 export const getRdpCatalogues=()=>pub<Catalogue[]>('/catalogue')
+
+// Applicant credentials are sent in POST bodies, never URL query parameters,
+// when retrieving or accepting an immutable programme quotation.
+export type RDPQuotation = {
+  preferred_package_name?: string | null
+  preferred_fee_plan_name?: string | null
+  preferred_total_amount_subunit?: number | null
+  preferred_currency?: string | null
+  application_ref: string
+  quote_id: number
+  quote_number: number
+  status: 'offered' | 'accepted'
+  package_name: string | null
+  entitlements_snapshot_json: string | null
+  currency: string
+  gross_total_subunit: number
+  scholarship_subunit: number
+  payable_total_subunit: number
+  effective_date: string | null
+  expires_at: string | null
+  accepted_at: string | null
+  installments: {sequence_number: number; amount_subunit: number; due_date: string | null; description: string | null}[]
+}
+export type RDPQuotationAcceptance = {
+  application_ref: string
+  quote_id: number
+  quote_status: 'accepted'
+  application_status: 'payment_due'
+  payment_token: string
+  invoices: {sequence: number; amount_subunit: number; currency: string; due_date: string | null; status: string}[]
+}
+export const getRdpQuotation = (application_ref: string, access_token: string) =>
+  pub<RDPQuotation>('/quotation', {
+    method: 'POST', cache: 'no-store', body: JSON.stringify({application_ref, access_token}),
+  })
+export const acceptRdpQuotation = (application_ref: string, access_token: string, quote_id: number) =>
+  pub<RDPQuotationAcceptance>(`/quotations/${quote_id}/accept`, {
+    method: 'POST', cache: 'no-store', body: JSON.stringify({application_ref, access_token}),
+  })

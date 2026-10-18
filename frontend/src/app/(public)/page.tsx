@@ -10,7 +10,7 @@ import { catalogueDuration, catalogueTitle, cohortLink } from '@/lib/rdp-catalog
 
 export const metadata: Metadata = {
   title: 'Ungozu R & D — Researcher Development Programmes',
-  description: 'Research mentorship and development programmes with configurable curricula, cohorts and participation packages.',
+  description: 'Practical research mentoring, training, and development programmes for early-career researchers.',
 }
 
 const pillars = [
@@ -35,7 +35,7 @@ export default async function RDPHomePage() {
       </div>
     </section>
     <section id="published-programmes" className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
-      <RDPSectionHeading eyebrow="Available programmes" title="Choose a published cohort" text="Programme duration, dates, learning content, packages and fees are managed by the programme administrator."/>
+      <RDPSectionHeading eyebrow="Available programmes" title="Explore programmes and cohorts" text="Explore mentoring options, learning activities, programme dates and fees for each available cohort."/>
       {catalogues.length ? <div className="mt-8 grid gap-5 md:grid-cols-2">{catalogues.map(c => <Card key={c.cohort.id}>
         <CardHeader><p className="text-xs uppercase tracking-wide text-primary">{c.cohort.label}</p><CardTitle>{catalogueTitle(c)}</CardTitle></CardHeader>
         <CardContent className="space-y-3 text-sm"><p className="text-muted-foreground">{c.version?.overview || c.programme?.description || c.cohort.public_summary || 'Programme details are available on the curriculum page.'}</p><p><b>Duration:</b> {catalogueDuration(c)}</p><p><b>Dates:</b> {c.cohort.start_date} to {c.cohort.end_date}</p><p><b>Capacity:</b> {c.cohort.capacity} places</p><p><b>Applications:</b> {c.accepting_applications ? `Open until ${c.cohort.application_deadline}` : 'Not currently open'}</p>

@@ -116,6 +116,7 @@ from app.schemas.rdp_fee_quote_public import (
 )
 
 from app.services.rdp_fee_quote_issuance import issue_fee_quote
+from app.services.rdp_application_preferences import validate_package_preference
 
 from app.services.rdp_quote_eligibility import validate_admission_billing_configuration
 
@@ -192,6 +193,7 @@ def _application_admin_out(a: RDPApplication) -> RDPApplicationAdminOut:
         current_outputs=a.current_outputs, commitment=a.commitment,
 
         scholarship_interest=a.scholarship_interest, referral_source=a.referral_source,
+        preferred_package_id=a.preferred_package_id, preferred_fee_plan_id=a.preferred_fee_plan_id,
 
         status=a.status, fee_plan_id=a.fee_plan_id, acceptance_deadline=a.acceptance_deadline,
 
@@ -466,6 +468,21 @@ async def submit_application(request: Request, payload: RDPApplicationCreate, db
 
         raise HTTPException(409, "An application already exists for this email and cohort")
 
+    if payload.preferred_fee_plan_id is not None:
+        requested_plan = await db.get(RDPFeePlan, payload.preferred_fee_plan_id)
+        requested_package = await db.get(RDPPackage, payload.preferred_package_id)
+        try:
+            validate_package_preference(
+                cohort_id=cohort.id,
+                programme_version_id=cohort.programme_version_id,
+                requested_package_id=payload.preferred_package_id,
+                requested_fee_plan_id=payload.preferred_fee_plan_id,
+                package=requested_package,
+                plan=requested_plan,
+            )
+        except ValueError as exc:
+            raise HTTPException(422, str(exc)) from exc
+
     token = issue_token()
 
     obj = RDPApplication(
@@ -481,6 +498,8 @@ async def submit_application(request: Request, payload: RDPApplicationCreate, db
         current_outputs=(payload.current_outputs or "").strip() or None, commitment=payload.commitment.strip(),
 
         scholarship_interest=payload.scholarship_interest, referral_source=(payload.referral_source or "").strip() or None,
+        preferred_package_id=payload.preferred_package_id,
+        preferred_fee_plan_id=payload.preferred_fee_plan_id,
 
         status="submitted", submitted_at=datetime.utcnow(),
 
@@ -1303,6 +1322,13 @@ async def decide_application(application_id: int, payload: RDPDecisionRequest, d
         if not fee_plan or fee_plan.cohort_id != a.cohort_id or not fee_plan.is_active:
 
             raise HTTPException(422, "Invalid fee plan")
+
+        # Applicant preference is advisory. Any administrator override must
+        # be explained in the offer; silent changes are not permitted.
+        if (a.preferred_fee_plan_id is not None
+                and fee_plan.id != a.preferred_fee_plan_id
+                and not (payload.admission_notes or "").strip()):
+            raise HTTPException(422, "Explain why the offered plan differs from the applicant's preference")
 
         # A locking read avoids stale repeatable-read snapshots.
 
@@ -2764,6 +2790,23 @@ async def set_participant_password(payload: PasswordSetPayload, db: DbDep):
     return {"message": "Password set successfully"}
 
 
+async def _public_preference(db: AsyncSession, application: RDPApplication) -> dict:
+    result = {
+        "preferred_package_name": None, "preferred_fee_plan_name": None,
+        "preferred_total_amount_subunit": None, "preferred_currency": None,
+    }
+    if application.preferred_package_id is not None:
+        package = await db.get(RDPPackage, application.preferred_package_id)
+        result["preferred_package_name"] = package.name if package else None
+    if application.preferred_fee_plan_id is not None:
+        plan = await db.get(RDPFeePlan, application.preferred_fee_plan_id)
+        if plan:
+            result.update(preferred_fee_plan_name=plan.name,
+                          preferred_total_amount_subunit=plan.total_amount_subunit,
+                          preferred_currency=plan.currency)
+    return result
+
+
 @router.post(
     "/public/quotation",
     response_model=RDPQuotationReviewResponse,
@@ -2855,6 +2898,7 @@ async def public_quotation_review(
     ).scalars().all()
 
     return RDPQuotationReviewResponse(
+        **(await _public_preference(db, application)),
         application_ref=application.application_ref,
         quote_id=quotation.id,
         quote_number=quotation.quote_number,
@@ -2996,6 +3040,8 @@ async def public_quotation_accept(
             ],
         )
 
+        applicant_name, applicant_email = application.full_name, application.email
+
         # If commit fails, no payment token is returned.
         await db.commit()
 
@@ -3021,5 +3067,34 @@ async def public_quotation_accept(
         await db.rollback()
         raise
 
-    # Only reached after the database commit succeeds.
+    # Payment instructions are delivered only AFTER the quote and invoices commit.
+    # The private URL is also returned to the browser, so email failure does not
+    # prevent the applicant from continuing securely.
+    from html import escape as escape_html
+    payment_link = (
+        f"{settings.FRONTEND_URL.rstrip('/')}/payment?"
+        f"ref={quote(result.application_ref)}&token={quote(result.payment_token)}"
+    )
+    try:
+        await send_email(
+            to=applicant_email,
+            subject=f"Your programme payment link — {result.application_ref}",
+            html_body=(
+                f"<p>Hello {escape_html(applicant_name)},</p>"
+                "<p>Thank you for accepting your programme fee quotation. "
+                "You can now review your invoices and proceed to secure payment.</p>"
+                f'<p><a href="{escape_html(payment_link, quote=True)}">Open your private payment page</a></p>'
+                "<p>Keep this link private. You will be enrolled once the required payment is confirmed.</p>"
+            ),
+            plain_body=(
+                f"Hello {applicant_name},\n\n"
+                "Thank you for accepting your programme quotation.\n"
+                f"Your private payment page: {payment_link}\n"
+                "Please keep this link private.\n"
+            ),
+        )
+    except Exception:
+        # The transaction has already committed; never indicate a failed
+        # acceptance or attempt to roll it back because of an email failure.
+        pass
     return result

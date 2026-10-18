@@ -38,6 +38,10 @@ class RDPQuotationInstallmentOut(BaseModel):
 
 class RDPQuotationReviewResponse(BaseModel):
     """Financial terms shown before applicant acceptance."""
+    preferred_package_name: str | None = None
+    preferred_fee_plan_name: str | None = None
+    preferred_total_amount_subunit: int | None = None
+    preferred_currency: str | None = None
 
     application_ref: str
     quote_id: int
