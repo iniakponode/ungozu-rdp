@@ -97,7 +97,11 @@ class RDPApplication(Base, TimestampMixin):
     decided_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     cohort: Mapped[RDPCohort] = relationship("RDPCohort", lazy="selectin")
-    fee_plan: Mapped[RDPFeePlan | None] = relationship("RDPFeePlan", lazy="selectin")
+    fee_plan: Mapped[RDPFeePlan | None] = relationship(
+        "RDPFeePlan",
+        foreign_keys=[fee_plan_id],
+        lazy="selectin",
+    )
     reviews: Mapped[list["RDPApplicationReview"]] = relationship(
         "RDPApplicationReview", back_populates="application", cascade="all, delete-orphan", lazy="selectin"
     )
