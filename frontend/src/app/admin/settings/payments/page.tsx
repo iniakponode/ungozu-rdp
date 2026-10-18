@@ -1,4 +1,6 @@
 'use client'
+import { userErrorMessage } from '@/lib/api-errors'
+import { AdminHelpLink } from '@/components/rdp/help-link'
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
@@ -78,7 +80,7 @@ function ProviderCard({config,onSaved}:{config:RDPPaymentProviderConfig;onSaved:
       })
       toast.success(`${config.display_name} ${config.environment.toUpperCase()} settings saved`)
       await onSaved()
-    }catch(error){toast.error(error instanceof Error?error.message:'Unable to save provider')}
+    }catch(error){toast.error(userErrorMessage(error,'Unable to save provider'))}
     finally{setBusy(false)}
   }
 
@@ -88,7 +90,7 @@ function ProviderCard({config,onSaved}:{config:RDPPaymentProviderConfig;onSaved:
       const result=await testRDPPaymentProvider(config.provider,config.environment)
       result.success?toast.success(result.message):toast.error(result.message)
       await onSaved()
-    }catch(error){toast.error(error instanceof Error?error.message:'Connection test failed')}
+    }catch(error){toast.error(userErrorMessage(error,'Connection test failed'))}
     finally{setTesting(false)}
   }
 
@@ -139,7 +141,7 @@ export default function PaymentSettingsPage(){
       const [s,p,a]=await Promise.all([getRDPPaymentSettings(),getRDPPaymentProviders(),getRDPPaymentAudit()])
       setSettings(s);setActiveEnvironment(s.active_environment);setAllowSelection(s.allow_provider_selection);setProviders(p);setAudit(a)
       const h=await getRDPPaymentHealth(viewEnvironment);setHealth(h)
-    }catch(error){toast.error(error instanceof Error?error.message:'Unable to load payment settings')}
+    }catch(error){toast.error(userErrorMessage(error,'Unable to load payment settings'))}
   }
   useEffect(()=>{void load()},[])
   useEffect(()=>{getRDPPaymentHealth(viewEnvironment).then(setHealth).catch(()=>{})},[viewEnvironment])
@@ -152,12 +154,12 @@ export default function PaymentSettingsPage(){
     try{
       const updated=await updateRDPPaymentSettings({active_environment:activeEnvironment,allow_provider_selection:allowSelection,current_password:password||undefined})
       setSettings(updated);setPassword('');toast.success('Payment platform settings saved');await load()
-    }catch(error){toast.error(error instanceof Error?error.message:'Unable to update payment platform')}
+    }catch(error){toast.error(userErrorMessage(error,'Unable to update payment platform'))}
     finally{setSavingPlatform(false)}
   }
 
   return <div className="space-y-8">
-    <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-sm text-muted-foreground">Ungozu R & D · Payment gateway manager</p><h1 className="text-2xl font-bold">Payment Integration Settings</h1><p className="mt-1 max-w-3xl text-sm text-muted-foreground">Configure Paystack and Stripe without placing provider secrets in the browser or source code. Secret values are encrypted before database storage and are never returned in full.</p></div><Button asChild variant="outline"><Link href="/admin">Back to programme dashboard</Link></Button></div>
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-sm text-muted-foreground">Ungozu R & D · Payment gateway manager</p><h1 className="text-2xl font-bold">Payment Integration Settings</h1><AdminHelpLink topic="payments"/><p className="mt-1 max-w-3xl text-sm text-muted-foreground">Enter Paystack and Stripe credentials using the administrator-only form. Secret keys are submitted securely, encrypted before storage and masked in later API responses. Never place credentials in source code or public environment variables.</p></div><Button asChild variant="outline"><Link href="/admin">Back to programme dashboard</Link></Button></div>
 
     <Card><CardHeader><CardTitle className="flex items-center gap-2"><ShieldCheck className="h-5 w-5"/>Platform controls</CardTitle></CardHeader><CardContent className="grid gap-5 md:grid-cols-2">
       <div className="space-y-2"><Label>Active payment environment</Label><select className="h-10 w-full rounded-md border bg-background px-3 text-sm" value={activeEnvironment} onChange={e=>setActiveEnvironment(e.target.value as Environment)}><option value="test">TEST — no real money</option><option value="live">LIVE — real payments</option></select><p className="text-xs text-muted-foreground">The participant checkout only uses providers configured in this environment.</p></div>

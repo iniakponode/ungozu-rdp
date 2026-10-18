@@ -1,4 +1,5 @@
 'use client'
+import { userErrorMessage } from '@/lib/api-errors'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { adminCompletion, completionDecision, evaluateCriterion, issueCertificate, revokeCertificate, reviewCurriculum, type Completion } from '@/lib/rdp-completion-api'
@@ -11,9 +12,9 @@ import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
 export function CompletionAdmin({enrollmentId}:{enrollmentId:number}){
  const [data,setData]=useState<Completion|null>(null),[error,setError]=useState(''),[scores,setScores]=useState<Record<number,string>>({}),[evidence,setEvidence]=useState<Record<number,string>>({}),[feedback,setFeedback]=useState<Record<number,string>>({}),[curriculumFeedback,setCurriculumFeedback]=useState<Record<number,string>>({}),[rationale,setRationale]=useState(''),[revokeReason,setRevokeReason]=useState(''),[busy,setBusy]=useState(false)
- async function refresh(){try{setData(await adminCompletion(enrollmentId));setError('')}catch(e){setData(null);setError(e instanceof Error?e.message:'Could not load completion record')}}
+ async function refresh(){try{setData(await adminCompletion(enrollmentId));setError('')}catch(e){setData(null);setError(userErrorMessage(e,'Could not load completion record'))}}
  useEffect(()=>{void refresh()},[enrollmentId])
- async function action(task:()=>Promise<unknown>,msg:string){setBusy(true);try{await task();await refresh();toast.success(msg)}catch(e){toast.error(e instanceof Error?e.message:'Operation failed')}finally{setBusy(false)}}
+ async function action(task:()=>Promise<unknown>,msg:string){setBusy(true);try{await task();await refresh();toast.success(msg)}catch(e){toast.error(userErrorMessage(e,'Operation failed'))}finally{setBusy(false)}}
  if(error)return <Card><CardHeader><CardTitle>Assessment and completion</CardTitle></CardHeader><CardContent className="text-sm text-muted-foreground">{error}</CardContent></Card>
  if(!data)return <p className="text-sm">Loading assessments…</p>
  return <Card><CardHeader><CardTitle>Assessment and completion · {data.programme_title}</CardTitle></CardHeader><CardContent className="space-y-6"><Badge variant="outline">{data.completion_status}</Badge>

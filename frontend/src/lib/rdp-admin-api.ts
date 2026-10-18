@@ -1,7 +1,8 @@
+import { apiErrorFromResponse } from './api-errors'
 export class ApiError extends Error { constructor(public status:number,message:string){super(message)} }
 async function apiFetch<T>(path:string,options:RequestInit={}):Promise<T>{
  const res=await fetch(`/api/rdp-admin${path}`,{headers:{'Content-Type':'application/json',...options.headers},...options})
- if(!res.ok){throw new ApiError(res.status,await res.text())}
+ if(!res.ok){throw await apiErrorFromResponse(res)}
  if(res.status===204)return undefined as T
  return res.json() as Promise<T>
 }
@@ -46,8 +47,8 @@ export type RDPEventInput=Omit<RDPEventAdmin,'id'|'cohort_id'>; export type RDPR
 export const getRDPEnrollment=(id:number)=>apiFetch<RDPEnrollmentAdminDetail>(`/enrollments/${id}`)
 export const reviewRDPDevelopmentPlan=(id:number,data:{mentor_notes?:string;status?:string})=>apiFetch<RDPDevelopmentPlanAdmin>(`/enrollments/${id}/development-plan`,{method:'PUT',body:JSON.stringify(data)})
 export const reviewRDPCheckIn=(id:number,data:{mentor_feedback?:string;status?:string})=>apiFetch<RDPCheckInAdmin>(`/checkins/${id}`,{method:'PUT',body:JSON.stringify(data)})
-export const getRDPEvents=()=>apiFetch<RDPEventAdmin[]>('/events'); export const createRDPEvent=(data:RDPEventInput)=>apiFetch<RDPEventAdmin>('/events',{method:'POST',body:JSON.stringify(data)}); export const updateRDPEvent=(id:number,data:RDPEventInput)=>apiFetch<RDPEventAdmin>(`/events/${id}`,{method:'PUT',body:JSON.stringify(data)}); export const deleteRDPEvent=(id:number)=>apiFetch<void>(`/events/${id}`,{method:'DELETE'})
-export const getRDPResources=()=>apiFetch<RDPResourceAdmin[]>('/resources'); export const createRDPResource=(data:RDPResourceInput)=>apiFetch<RDPResourceAdmin>('/resources',{method:'POST',body:JSON.stringify(data)}); export const updateRDPResource=(id:number,data:RDPResourceInput)=>apiFetch<RDPResourceAdmin>(`/resources/${id}`,{method:'PUT',body:JSON.stringify(data)}); export const deleteRDPResource=(id:number)=>apiFetch<void>(`/resources/${id}`,{method:'DELETE'})
+export const getRDPEvents=(cohortId:number)=>apiFetch<RDPEventAdmin[]>(`/events?cohort_id=${cohortId}`); export const createRDPEvent=(cohortId:number,data:RDPEventInput)=>apiFetch<RDPEventAdmin>(`/events?cohort_id=${cohortId}`,{method:'POST',body:JSON.stringify(data)}); export const updateRDPEvent=(id:number,data:RDPEventInput)=>apiFetch<RDPEventAdmin>(`/events/${id}`,{method:'PUT',body:JSON.stringify(data)}); export const deleteRDPEvent=(id:number)=>apiFetch<void>(`/events/${id}`,{method:'DELETE'})
+export const getRDPResources=(cohortId:number)=>apiFetch<RDPResourceAdmin[]>(`/resources?cohort_id=${cohortId}`); export const createRDPResource=(cohortId:number,data:RDPResourceInput)=>apiFetch<RDPResourceAdmin>(`/resources?cohort_id=${cohortId}`,{method:'POST',body:JSON.stringify(data)}); export const updateRDPResource=(id:number,data:RDPResourceInput)=>apiFetch<RDPResourceAdmin>(`/resources/${id}`,{method:'PUT',body:JSON.stringify(data)}); export const deleteRDPResource=(id:number)=>apiFetch<void>(`/resources/${id}`,{method:'DELETE'})
 export interface RDPPaymentPlatformSettings { active_environment:'test'|'live';allow_provider_selection:boolean }
 export interface RDPPaymentProviderConfig { provider:'paystack'|'stripe';environment:'test'|'live';display_name:string;is_enabled:boolean;public_key?:string|null;secret_configured:boolean;webhook_secret_configured:boolean;secret_key_masked?:string|null;webhook_secret_masked?:string|null;supported_currencies:string[];priority:number;last_tested_at?:string|null;last_test_status?:string|null;last_test_message?:string|null;source:string;webhook_url:string;callback_url:string }
 export interface RDPPaymentProviderHealth { provider:string;environment:string;display_name:string;enabled:boolean;configured:boolean;connection_status?:string|null;last_tested_at?:string|null;last_test_message?:string|null;last_webhook_at?:string|null;webhook_status?:string|null;successful_payments:number;failed_payments:number }

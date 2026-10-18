@@ -1,3 +1,4 @@
+import { apiErrorFromResponse } from './api-errors'
 /** Milestone C: typed assessment and certificate client via existing auth proxies. */
 export type Criterion = { id:number;programme_version_id:number;code:string;title:string;description:string|null;category:string;max_score:number;pass_score:number;required:boolean;sort_order:number }
 export type CriterionInput = Omit<Criterion,'id'|'programme_version_id'>
@@ -10,8 +11,8 @@ export type Completion = {enrollment_id:number;programme_version_id:number;progr
 export type Verification = {valid:boolean;status:'valid'|'revoked';certificate_number:string;recipient_name:string;programme_title:string;cohort_label:string;duration:string|null;issued_at:string}
 async function call<T>(path:string,opts:RequestInit={}){
  const res=await fetch(path,{...opts,cache:'no-store',headers:{'Content-Type':'application/json',...opts.headers}})
+ if(!res.ok)throw await apiErrorFromResponse(res)
  const body=await res.json().catch(()=>({}))
- if(!res.ok){const detail=typeof body.detail==='string'?body.detail:body.detail?.message||`Request failed (${res.status})`;throw new Error(String(detail))}
  return body as T
 }
 const admin='/api/rdp-admin'

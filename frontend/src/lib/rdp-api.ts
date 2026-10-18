@@ -1,3 +1,4 @@
+import { apiErrorFromResponse } from './api-errors'
 import type { Catalogue } from './rdp-catalogue'
 export type FeePlan = { id:number; code:string; region:string; name:string; currency:string; total_amount_subunit:number; installment_count:number; installment_amount_subunit:number; description?:string|null; is_active:boolean }
 export type Cohort = { id:number; name:string; slug:string; label:string; application_open_date:string; application_deadline:string; start_date:string; graduation_date:string; end_date:string; capacity:number; status:string; public_summary?:string|null; fee_plans:FeePlan[] }
@@ -6,8 +7,8 @@ export type ApplicationStatus = { application_ref:string; full_name:string; coho
 
 async function pub<T>(path:string, opts:RequestInit={}) {
   const r = await fetch(`/api/rdp/public${path}`, { ...opts, headers: { 'Content-Type':'application/json', ...opts.headers } })
+  if (!r.ok) throw await apiErrorFromResponse(r)
   const body = await r.json().catch(() => ({}))
-  if (!r.ok) throw new Error(body.detail ?? 'Request failed')
   return body as T
 }
 export const getRdpCohort = () => pub<Cohort>('/cohort')

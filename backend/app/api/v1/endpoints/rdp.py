@@ -2667,8 +2667,15 @@ async def update_checkin(month_number: int, payload: RDPCheckInUpdate, db: DbDep
     if e.cohort.programme_version_id is not None:
         from app.models.rdp_programmes import RDPProgrammeVersion
         version = await db.get(RDPProgrammeVersion, e.cohort.programme_version_id)
-        if version is not None and version.duration_unit == "months":
-            max_months = version.duration_value
+        if version is not None:
+            if version.duration_unit == "months":
+                max_months = version.duration_value
+            elif version.duration_unit == "days":
+                max_months = max(1, (version.duration_value + 29) // 30)
+            elif version.duration_unit == "weeks":
+                max_months = max(1, (version.duration_value * 7 + 29) // 30)
+            elif version.duration_unit == "years":
+                max_months = version.duration_value * 12
     if month_number < 1 or month_number > max_months:
         raise HTTPException(422, f"Month must be between 1 and {max_months}")
 
