@@ -13,7 +13,7 @@ from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field, model_validator
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -206,7 +206,10 @@ async def list_criteria(version_id: int, db: Db, _: Admin):
     criteria = (await db.execute(select(RDPAssessmentCriterion).where(
         RDPAssessmentCriterion.programme_version_id == version_id,
     ).order_by(RDPAssessmentCriterion.sort_order, RDPAssessmentCriterion.id))).scalars().all()
-    return [row(c, *CRITERION_FIELDS) for c in criteria]
+    archived_ids = set((await db.execute(text(
+        "SELECT record_id FROM rdp_record_archives WHERE record_type='criteria'"
+    ))).scalars().all())
+    return [row(c, *CRITERION_FIELDS) for c in criteria if c.id not in archived_ids]
 
 
 @router.post('/admin/assessment-criteria/{version_id}', status_code=201)
@@ -224,6 +227,11 @@ async def update_criterion(criterion_id: int, payload: CriterionIn, db: Db, _: A
     if criterion is None:
         raise HTTPException(404, 'Criterion not found')
     await draft_version(db, criterion.programme_version_id)
+    archived = (await db.execute(text(
+        "SELECT COUNT(*) FROM rdp_record_archives WHERE record_type='criteria' AND record_id=:id"
+    ), {'id':criterion.id})).scalar_one()
+    if archived:
+        raise HTTPException(409, 'Restore archived criterion before editing')
     for key, value in payload.model_dump().items():
         setattr(criterion, key, value)
     await save(db)
@@ -244,6 +252,11 @@ async def record_evaluation(enrollment_id: int, payload: EvaluationIn, db: Db, a
     criterion = await db.get(RDPAssessmentCriterion, payload.criterion_id)
     if criterion is None or criterion.programme_version_id != version.id:
         raise HTTPException(422, 'Criterion does not belong to this enrollment programme version')
+    archived = (await db.execute(text(
+        "SELECT COUNT(*) FROM rdp_record_archives WHERE record_type='criteria' AND record_id=:id"
+    ), {'id':criterion.id})).scalar_one()
+    if archived:
+        raise HTTPException(409, 'Archived criteria cannot receive new evaluations')
     if payload.score > criterion.max_score:
         raise HTTPException(422, 'Score exceeds criterion maximum')
     item = RDPAssessmentEvaluation(enrollment_id=e.id, criterion_id=criterion.id,
