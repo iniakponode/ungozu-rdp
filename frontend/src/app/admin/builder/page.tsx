@@ -73,7 +73,7 @@ export default function ProgrammeBuilderPage(){
  const chooseVersion=(id:number)=>{setVersionId(id);setCohortId(0);setModuleId(0);setPackageId(0);setEdit(null)}
  const chooseCohort=(id:number)=>{setCohortId(id);setFeeOpen(false);setEdit(null)}
  const editDraft=(title:string,fields:Field[],value:object,path:string)=>form(title,fields,asForm(value,fields),path,'PUT')
- return <div className="space-y-6"><div><h1 className="text-2xl font-bold">Programme Builder</h1><Link className="underline text-sm" href="/admin/builder/records">Manage archives and unused drafts</Link>
+ return <div className="space-y-6"><div><h1 className="text-2xl font-bold">Programme Builder</h1><Link className="inline-flex rounded-md border px-3 py-2 text-sm font-medium hover:bg-accent" href="/admin/builder/records">Manage records</Link>
 <AdminHelpLink topic="builder"/><p className="text-sm text-muted-foreground">Configure separate programmes and versions, curriculum, package entitlements, cohorts and pricing. Published programme versions cannot be edited; clone them to revise.</p></div>
  <ApiErrorAlert message={loadError}/>{loading?<p>Loading programme configuration…</p>:<>
  <Card id="builder-programme"><CardHeader><CardTitle>1. Programme</CardTitle></CardHeader><CardContent className="space-y-3">{picker(programmes,programmeId,chooseProgramme,p=>`${p.name} (${p.status})`,'Choose programme')}<div className="flex flex-wrap gap-2"><Button onClick={()=>form('Create programme',programmeFields,initialProgramme,'/programmes')}>New programme</Button>{programme&&!programme.is_published&&<Button variant="outline" onClick={()=>editDraft('Edit programme',programmeFields,programme,`/programmes/${programme.id}`)}>Edit programme</Button>}</div></CardContent></Card>
