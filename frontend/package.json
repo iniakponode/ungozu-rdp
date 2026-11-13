@@ -6,8 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
-    "lint:fix": "next lint --fix",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "type-check": "tsc --noEmit",
@@ -34,11 +34,11 @@
     "@tiptap/starter-kit": "^3.31.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "dompurify": "^3.4.16",
+    "dompurify": "^3.4.17",
     "framer-motion": "^12.38.0",
     "isomorphic-dompurify": "^2.21.0",
     "lucide-react": "^1.8.0",
-    "next": "^16.3.6",
+    "next": "^16.4.6",
     "postcss": "^8.5.28",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
@@ -47,7 +47,7 @@
     "tailwind-merge": "^3.5.0",
     "tailwindcss": "^4.2.2",
     "tailwindcss-animate": "^1.0.7",
-    "zod": "^3.24.2"
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.5",
@@ -57,7 +57,7 @@
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "eslint": "^9.0.0",
-    "eslint-config-next": "^15.5.15",
+    "eslint-config-next": "^16.4.0",
     "prettier": "^3.3.0",
     "typescript": "^5.6.0"
   },
