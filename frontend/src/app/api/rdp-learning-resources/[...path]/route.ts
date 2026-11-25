@@ -22,7 +22,12 @@ async function handler(request: NextRequest, { params }: Params) {
     segments.length === 2 && segments[1] === 'upload'
   const publish = request.method === 'PUT' && admin &&
     segments.length === 3 && numericId(segments[1]) && segments[2] === 'publish'
-  if (!list && !download && !upload && !publish) {
+  const metadata = request.method === 'PUT' && admin && segments.length === 3 && numericId(segments[1]) && segments[2] === 'metadata'
+  const archive = request.method === 'PUT' && admin && segments.length === 3 && numericId(segments[1]) && segments[2] === 'archive'
+  const replace = request.method === 'POST' && admin && segments.length === 3 && numericId(segments[1]) && segments[2] === 'replace'
+  const history = request.method === 'GET' && admin && segments.length === 3 && numericId(segments[1]) && segments[2] === 'history'
+  const revisionDownload = request.method === 'GET' && admin && segments.length === 5 && numericId(segments[1]) && segments[2] === 'revisions' && numericId(segments[3]) && segments[4] === 'download'
+  if (!list && !download && !upload && !publish && !metadata && !archive && !replace && !history && !revisionDownload) {
     return NextResponse.json({ detail: 'Not found' }, { status: 404 })
   }
   const token = request.cookies.get(admin ? 'admin_token' : 'rdp_portal_token')?.value
@@ -33,17 +38,17 @@ async function handler(request: NextRequest, { params }: Params) {
   const contentType = request.headers.get('content-type')
   if (contentType) headers.set('Content-Type', contentType)
   // The FastAPI endpoint expects raw DOCX bytes, not multipart/form-data.
-  if (upload && contentType && !contentType.toLowerCase().startsWith(
+  if ((upload || replace) && contentType && !contentType.toLowerCase().startsWith(
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
   )) {
     return NextResponse.json({ detail: 'Expected DOCX content type' }, { status: 415 })
   }
-  if (upload && Number(request.headers.get('content-length') ?? 0) > 15 * 1024 * 1024) {
+  if ((upload || replace) && Number(request.headers.get('content-length') ?? 0) > 15 * 1024 * 1024) {
     return NextResponse.json({ detail: 'DOCX exceeds 15 MiB' }, { status: 413 })
   }
   try {
     let body: ArrayBuffer | undefined
-    if (upload) {
+    if (upload || replace) {
       // Enforce the cap while reading. Clients can omit Content-Length.
       const reader = request.body?.getReader()
       if (!reader) return NextResponse.json({ detail: 'Empty upload' }, { status: 400 })
