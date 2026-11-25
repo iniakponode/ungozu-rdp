@@ -2394,7 +2394,7 @@ async def admin_review_checkin(checkin_id: int, payload: RDPAdminCheckInUpdate, 
 
 @router.get("/admin/events", response_model=list[RDPEventAdminOut])
 
-async def admin_events(db: DbDep, _: AdminDep, cohort_id: int = 1):
+async def admin_events(db: DbDep, _: AdminDep, cohort_id: int = Query(..., ge=1)):
 
     return list((await db.execute(select(RDPProgrammeEvent).where(
 
@@ -2408,7 +2408,7 @@ async def admin_events(db: DbDep, _: AdminDep, cohort_id: int = 1):
 
 @router.post("/admin/events", response_model=RDPEventAdminOut, status_code=201)
 
-async def admin_create_event(payload: RDPEventCreate, db: DbDep, _: AdminDep, cohort_id: int = 1):
+async def admin_create_event(payload: RDPEventCreate, db: DbDep, _: AdminDep, cohort_id: int = Query(..., ge=1)):
 
     if not await db.get(RDPCohort, cohort_id):
 
@@ -2426,11 +2426,11 @@ async def admin_create_event(payload: RDPEventCreate, db: DbDep, _: AdminDep, co
 
 @router.put("/admin/events/{event_id}", response_model=RDPEventAdminOut)
 
-async def admin_update_event(event_id: int, payload: RDPEventCreate, db: DbDep, _: AdminDep):
+async def admin_update_event(event_id: int, payload: RDPEventCreate, db: DbDep, _: AdminDep, cohort_id: int = Query(..., ge=1)):
 
     obj = await db.get(RDPProgrammeEvent, event_id)
 
-    if not obj:
+    if not obj or obj.cohort_id != cohort_id:
 
         raise HTTPException(404, "Event not found")
 
@@ -2448,11 +2448,11 @@ async def admin_update_event(event_id: int, payload: RDPEventCreate, db: DbDep, 
 
 @router.delete("/admin/events/{event_id}", status_code=204)
 
-async def admin_delete_event(event_id: int, db: DbDep, _: AdminDep):
+async def admin_delete_event(event_id: int, db: DbDep, _: AdminDep, cohort_id: int = Query(..., ge=1)):
 
     obj = await db.get(RDPProgrammeEvent, event_id)
 
-    if not obj:
+    if not obj or obj.cohort_id != cohort_id:
 
         raise HTTPException(404, "Event not found")
 
@@ -2464,7 +2464,7 @@ async def admin_delete_event(event_id: int, db: DbDep, _: AdminDep):
 
 @router.get("/admin/resources", response_model=list[RDPResourceAdminOut])
 
-async def admin_resources(db: DbDep, _: AdminDep, cohort_id: int = 1):
+async def admin_resources(db: DbDep, _: AdminDep, cohort_id: int = Query(..., ge=1)):
 
     return list((await db.execute(select(RDPResource).where(
 
@@ -2478,7 +2478,7 @@ async def admin_resources(db: DbDep, _: AdminDep, cohort_id: int = 1):
 
 @router.post("/admin/resources", response_model=RDPResourceAdminOut, status_code=201)
 
-async def admin_create_resource(payload: RDPResourceCreate, db: DbDep, _: AdminDep, cohort_id: int = 1):
+async def admin_create_resource(payload: RDPResourceCreate, db: DbDep, _: AdminDep, cohort_id: int = Query(..., ge=1)):
 
     if not await db.get(RDPCohort, cohort_id):
 
@@ -2496,11 +2496,11 @@ async def admin_create_resource(payload: RDPResourceCreate, db: DbDep, _: AdminD
 
 @router.put("/admin/resources/{resource_id}", response_model=RDPResourceAdminOut)
 
-async def admin_update_resource(resource_id: int, payload: RDPResourceCreate, db: DbDep, _: AdminDep):
+async def admin_update_resource(resource_id: int, payload: RDPResourceCreate, db: DbDep, _: AdminDep, cohort_id: int = Query(..., ge=1)):
 
     obj = await db.get(RDPResource, resource_id)
 
-    if not obj:
+    if not obj or obj.cohort_id != cohort_id:
 
         raise HTTPException(404, "Resource not found")
 
@@ -2518,11 +2518,11 @@ async def admin_update_resource(resource_id: int, payload: RDPResourceCreate, db
 
 @router.delete("/admin/resources/{resource_id}", status_code=204)
 
-async def admin_delete_resource(resource_id: int, db: DbDep, _: AdminDep):
+async def admin_delete_resource(resource_id: int, db: DbDep, _: AdminDep, cohort_id: int = Query(..., ge=1)):
 
     obj = await db.get(RDPResource, resource_id)
 
-    if not obj:
+    if not obj or obj.cohort_id != cohort_id:
 
         raise HTTPException(404, "Resource not found")
 
