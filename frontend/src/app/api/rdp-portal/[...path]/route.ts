@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { rejectCrossSiteMutation } from '@/lib/server/request-security'
 
 const BACKEND_URL = process.env.BACKEND_URL ?? 'http://127.0.0.1:8010'
 const COOKIE = 'rdp_portal_token'
 
 async function handler(request: NextRequest, { params }: { params: Promise<{ path: string[] }> }) {
+  const originError = rejectCrossSiteMutation(request)
+  if (originError) return originError
   const token = request.cookies.get(COOKIE)?.value
   if (!token) return NextResponse.json({ detail: 'Not authenticated' }, { status: 401 })
   const { path } = await params
