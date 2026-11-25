@@ -58,6 +58,8 @@ from app.models.rdp import (
 
 )
 
+from app.models.rdp_curriculum import RDPCurriculumModule
+
 from app.models.user import User
 
 from app.schemas.rdp import (
@@ -2476,6 +2478,22 @@ async def admin_resources(db: DbDep, _: AdminDep, cohort_id: int = Query(..., ge
 
 
 
+async def _validate_resource_module(db: AsyncSession, cohort_id: int, module_id: int | None) -> None:
+
+    if module_id is None:
+        return
+
+    cohort = await db.get(RDPCohort, cohort_id)
+    if cohort is None:
+        raise HTTPException(404, "Cohort not found")
+    if cohort.programme_version_id is None:
+        raise HTTPException(422, "Legacy cohorts cannot select a curriculum module")
+
+    module = await db.get(RDPCurriculumModule, module_id)
+    if module is None or module.programme_version_id != cohort.programme_version_id:
+        raise HTTPException(422, "Curriculum module must belong to the cohort programme version")
+
+
 @router.post("/admin/resources", response_model=RDPResourceAdminOut, status_code=201)
 
 async def admin_create_resource(payload: RDPResourceCreate, db: DbDep, _: AdminDep, cohort_id: int = Query(..., ge=1)):
@@ -2483,6 +2501,8 @@ async def admin_create_resource(payload: RDPResourceCreate, db: DbDep, _: AdminD
     if not await db.get(RDPCohort, cohort_id):
 
         raise HTTPException(404, "Cohort not found")
+
+    await _validate_resource_module(db, cohort_id, payload.module_id)
 
     obj = RDPResource(cohort_id=cohort_id, **payload.model_dump())
 
@@ -2503,6 +2523,8 @@ async def admin_update_resource(resource_id: int, payload: RDPResourceCreate, db
     if not obj or obj.cohort_id != cohort_id:
 
         raise HTTPException(404, "Resource not found")
+
+    await _validate_resource_module(db, cohort_id, payload.module_id)
 
     for k, v in payload.model_dump().items():
 
