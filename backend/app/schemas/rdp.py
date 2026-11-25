@@ -1,6 +1,6 @@
 """Pydantic schemas for the Ungozu R & D Researcher Development Programme."""
-from datetime import date, datetime
-from pydantic import BaseModel, EmailStr, Field, model_validator
+from datetime import date, datetime, timezone
+from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
 
 
 class RDPFeePlanOut(BaseModel):
@@ -334,7 +334,24 @@ class RDPEventCreate(BaseModel):
     delivery_mode: str | None = Field(default=None, max_length=80)
     meeting_url: str | None = Field(default=None, max_length=1000)
     description: str | None = None
-    is_published: bool = True
+    is_published: bool = False
+
+    @field_validator("starts_at", "ends_at")
+    @classmethod
+    def normalize_event_datetime(cls, value):
+        if value is None:
+            return None
+        if value.tzinfo is None or value.utcoffset() is None:
+            raise ValueError(
+                "Event timestamps must include a UTC offset or timezone"
+            )
+        return value.astimezone(timezone.utc).replace(tzinfo=None)
+
+    @model_validator(mode="after")
+    def validate_event_dates(self):
+        if self.ends_at is not None and self.ends_at <= self.starts_at:
+            raise ValueError("Event end time must be after start time")
+        return self
 
 
 class RDPEventAdminOut(RDPEventOut):
@@ -349,7 +366,7 @@ class RDPResourceCreate(BaseModel):
     url: str | None = Field(default=None, max_length=1000)
     description: str | None = None
     month_number: int | None = Field(default=None, ge=1, le=12)
-    is_published: bool = True
+    is_published: bool = False
     sort_order: int = Field(default=0, ge=0, le=32767)
 
 
