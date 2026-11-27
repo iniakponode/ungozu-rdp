@@ -12,6 +12,16 @@ branch_labels = None
 depends_on = None
 
 def upgrade():
+    # Existing M3 databases use VARCHAR(32), which is too short
+    # for the M4 Alembic revision identifiers.
+    op.alter_column(
+        'alembic_version',
+        'version_num',
+        existing_type=sa.String(length=32),
+        type_=sa.String(length=64),
+        existing_nullable=False,
+    )
+
     # Nullable: all existing and legacy resources remain valid as cohort references.
     op.add_column('rdp_resources', sa.Column('module_id', sa.Integer(), nullable=True))
     op.create_index('ix_rdp_resources_module_id', 'rdp_resources', ['module_id'])
