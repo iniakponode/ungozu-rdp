@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { userErrorMessage } from '@/lib/api-errors'
+import { ResourceLifecycleControls } from '@/components/rdp/resource-lifecycle-controls'
 import { fetchBuilder, type BuilderData } from '@/lib/rdp-builder-api'
 import { adminResources, downloadResource, setResourcePublished, uploadResource, type LearningResource } from '@/lib/rdp-learning-resources-api'
 
@@ -82,6 +83,6 @@ export default function LearningResourcesAdminPage() {
       <div className="sm:col-span-2"><Label htmlFor="resource-file">DOCX file (maximum 15 MiB)</Label><Input id="resource-file" type="file" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" className="mt-1" required onChange={e=>setFile(e.target.files?.[0]??null)}/></div>
       <div className="sm:col-span-2"><Button type="submit" disabled={busy || !modules.length || !file}>{busy?'Working…':'Upload unpublished document'}</Button></div>
     </form></CardContent></Card>
-    <Card><CardHeader><CardTitle>Documents in this version ({resources.length})</CardTitle></CardHeader><CardContent className="space-y-3">{resources.length===0 && <p className="text-sm text-muted-foreground">No learning documents have been uploaded for this version.</p>}{resources.map(r => <div key={r.id} className="flex flex-wrap items-center justify-between gap-3 rounded-md border p-3"><div className="min-w-0"><strong className="block break-words">{r.title}</strong><p className="text-xs text-muted-foreground">{r.resource_code} · {r.audience} · {r.is_published?'Published':'Draft'} · {(r.size_bytes/1024).toFixed(0)} KiB</p></div><div className="flex gap-2"><Button size="sm" variant="outline" onClick={()=>void download(r)}>Download</Button><Button size="sm" disabled={busy} onClick={()=>void publish(r)}>{r.is_published?'Unpublish':'Publish'}</Button></div></div>)}</CardContent></Card>
+    <Card><CardHeader><CardTitle>Documents in this version ({resources.length})</CardTitle></CardHeader><CardContent className="space-y-3">{resources.length===0 && <p className="text-sm text-muted-foreground">No learning documents have been uploaded for this version.</p>}{resources.map(r => <div key={r.id} className="flex flex-wrap items-center justify-between gap-3 rounded-md border p-3"><div className="min-w-0"><strong className="block break-words">{r.title}</strong><p className="text-xs text-muted-foreground">{r.resource_code} · {r.audience} · {r.is_archived?'Archived':r.is_published?'Published':'Draft'} · revision {r.file_revision} · {(r.size_bytes/1024).toFixed(0)} KiB</p></div><div className="flex gap-2"><Button size="sm" variant="outline" onClick={()=>void download(r)}>Download</Button><Button size="sm" disabled={busy || r.is_archived} onClick={()=>void publish(r)}>{r.is_published?'Unpublish':'Publish'}</Button></div><ResourceLifecycleControls resource={r} modules={modules} onChanged={refresh}/></div>)}</CardContent></Card>
   </div>
 }

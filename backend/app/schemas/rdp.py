@@ -307,6 +307,7 @@ class RDPEventOut(BaseModel):
 
 class RDPResourceOut(BaseModel):
     id: int
+    module_id: int | None = None
     title: str
     resource_type: str
     url: str | None = None
@@ -361,6 +362,7 @@ class RDPEventAdminOut(RDPEventOut):
 
 
 class RDPResourceCreate(BaseModel):
+    module_id: int | None = Field(default=None, gt=0)
     title: str = Field(min_length=2, max_length=255)
     resource_type: str = Field(default="document", min_length=2, max_length=80)
     url: str | None = Field(default=None, max_length=1000)

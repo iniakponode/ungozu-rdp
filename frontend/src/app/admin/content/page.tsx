@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
-import { fetchBuilder, type Cohort } from '@/lib/rdp-builder-api'
+import { fetchBuilder, type Cohort, type Module } from '@/lib/rdp-builder-api'
 import { AdminHelpLink } from '@/components/rdp/help-link'
 import { ApiErrorAlert } from '@/components/ui/api-error-alert'
 import { userErrorMessage } from '@/lib/api-errors'
@@ -21,9 +21,11 @@ type EventEditorState = {
 }
 
 export default function RDPContentPage(){
- const [events,setEvents]=useState<RDPEventAdmin[]>([]),[resources,setResources]=useState<RDPResourceAdmin[]>([]),[cohorts,setCohorts]=useState<Cohort[]>([]),[cohortId,setCohortId]=useState<number|null>(null),[loadError,setLoadError]=useState(''),[event,setEvent]=useState({title:'',event_type:'masterclass',starts_at:'',ends_at:'',delivery_mode:'online',meeting_url:'',description:'',is_published:false}),[resource,setResource]=useState({title:'',resource_type:'document',url:'',description:'',month_number:'',sort_order:'0',is_published:false})
+ const [events,setEvents]=useState<RDPEventAdmin[]>([]),[resources,setResources]=useState<RDPResourceAdmin[]>([]),[cohorts,setCohorts]=useState<Cohort[]>([]),[modules,setModules]=useState<Module[]>([]),[cohortId,setCohortId]=useState<number|null>(null),[loadError,setLoadError]=useState(''),[event,setEvent]=useState({title:'',event_type:'masterclass',starts_at:'',ends_at:'',delivery_mode:'online',meeting_url:'',description:'',is_published:false}),[resource,setResource]=useState({title:'',resource_type:'document',url:'',description:'',month_number:'',module_id:'',sort_order:'0',is_published:false})
  const selectedCohortRef=useRef<number|null>(null)
 
+ const cohortVersionId=cohorts.find(c=>c.id===cohortId)?.programme_version_id??null
+ const selectableModules=modules.filter(m=>cohortVersionId!==null&&m.programme_version_id===cohortVersionId).sort((a,b)=>a.sequence_number-b.sequence_number)
  const load=async(id:number)=>{
   const [nextEvents,nextResources]=await Promise.all([
    getRDPEvents(id),
@@ -35,7 +37,7 @@ export default function RDPContentPage(){
   setEvents(nextEvents)
   setResources(nextResources)
  }
- useEffect(()=>{fetchBuilder().then(d=>{setCohorts(d.cohorts)}).catch(e=>setLoadError(userErrorMessage(e,'Could not load cohorts')))},[])
+ useEffect(()=>{fetchBuilder().then(d=>{setCohorts(d.cohorts);setModules(d.modules)}).catch(e=>setLoadError(userErrorMessage(e,'Could not load cohorts')))},[])
  useEffect(()=>{
   if(cohortId===null)return
 
@@ -104,7 +106,7 @@ export default function RDPContentPage(){
    toast.error(userErrorMessage(error,'Could not create event'))
   }
  }
- const addResource=async()=>{if(cohortId===null)return;try{await createRDPResource(cohortId,{title:resource.title,resource_type:resource.resource_type,url:resource.url||null,description:resource.description||null,month_number:resource.month_number?Number(resource.month_number):null,sort_order:Number(resource.sort_order)||0,is_published:resource.is_published});toast.success('Resource created');setResource({...resource,title:'',url:'',description:'',month_number:''});await load(cohortId)}catch(e){toast.error(userErrorMessage(e,'Could not create resource'))}}
+ const addResource=async()=>{if(cohortId===null)return;try{await createRDPResource(cohortId,{module_id:resource.module_id?Number(resource.module_id):null,title:resource.title,resource_type:resource.resource_type,url:resource.url||null,description:resource.description||null,month_number:resource.month_number?Number(resource.month_number):null,sort_order:Number(resource.sort_order)||0,is_published:resource.is_published});toast.success('Resource created');setResource({...resource,title:'',url:'',description:'',month_number:''});await load(cohortId)}catch(e){toast.error(userErrorMessage(e,'Could not create resource'))}}
 
  const [editingEvent,setEditingEvent]=useState<EventEditorState|null>(null)
  const [eventSaving,setEventSaving]=useState(false)
@@ -251,6 +253,7 @@ export default function RDPContentPage(){
 
   try{
    await updateRDPResource(selectedId,item.id,{
+    module_id:item.module_id??null,
     title:item.title.trim(),
     resource_type:item.resource_type.trim(),
     url:item.url?.trim()||null,
@@ -354,13 +357,14 @@ export default function RDPContentPage(){
  <ApiErrorAlert message={loadError}/><div className="rounded-lg border bg-card p-4 space-y-2"><label className="block text-sm font-medium" htmlFor="content-cohort">Manage content for cohort</label><select id="content-cohort" className="w-full rounded-md border bg-background p-2 text-sm" value={cohortId??""} onChange={e=>{
       setEditingEvent(null)
       setEditingResource(null)
+      setResource(x=>({...x,module_id:''}))
       setEvents([])
       setResources([])
       setLoadError('')
       selectedCohortRef.current=e.target.value?Number(e.target.value):null
       setCohortId(selectedCohortRef.current)
     }}><option value="">Choose cohort</option>{cohorts.map(c=><option value={c.id} key={c.id}>{c.label}{c.is_published?"":" (unpublished)"}</option>)}</select>{cohortId===null&&<p className="text-sm text-muted-foreground">Choose or create a cohort before managing content.</p>}</div>{cohortId!==null&&<><div className="grid gap-6 xl:grid-cols-2"><Card><CardHeader><CardTitle>Create event</CardTitle></CardHeader><CardContent className="space-y-3"><div><Label>Title</Label><Input value={event.title} onChange={e=>setEvent(x=>({...x,title:e.target.value}))}/></div><div className="grid gap-3 sm:grid-cols-2"><div><Label>Type</Label><Input value={event.event_type} onChange={e=>setEvent(x=>({...x,event_type:e.target.value}))}/></div><div><Label>Delivery mode</Label><Input value={event.delivery_mode} onChange={e=>setEvent(x=>({...x,delivery_mode:e.target.value}))}/></div><div><Label>Starts (WAT, UTC+1)</Label><Input type="datetime-local" value={event.starts_at} onChange={e=>setEvent(x=>({...x,starts_at:e.target.value}))}/></div><div><Label>Ends (WAT, optional)</Label><Input type="datetime-local" value={event.ends_at} onChange={e=>setEvent(x=>({...x,ends_at:e.target.value}))}/></div></div><div><Label>Meeting URL</Label><Input value={event.meeting_url} onChange={e=>setEvent(x=>({...x,meeting_url:e.target.value}))}/></div><div><Label>Description</Label><Textarea value={event.description} onChange={e=>setEvent(x=>({...x,description:e.target.value}))}/></div><label className="flex gap-2 text-sm"><input type="checkbox" checked={event.is_published} onChange={e=>setEvent(x=>({...x,is_published:e.target.checked}))}/>Publish to participants</label><Button disabled={!event.title||!event.starts_at} onClick={addEvent}>Create event</Button></CardContent></Card>
- <Card><CardHeader><CardTitle>Create resource</CardTitle></CardHeader><CardContent className="space-y-3"><div><Label>Title</Label><Input value={resource.title} onChange={e=>setResource(x=>({...x,title:e.target.value}))}/></div><div className="grid gap-3 sm:grid-cols-2"><div><Label>Type</Label><Input value={resource.resource_type} onChange={e=>setResource(x=>({...x,resource_type:e.target.value}))}/></div><div><Label>Month (optional)</Label><Input type="number" min={1} max={12} value={resource.month_number} onChange={e=>setResource(x=>({...x,month_number:e.target.value}))}/></div></div><div><Label>URL</Label><Input value={resource.url} onChange={e=>setResource(x=>({...x,url:e.target.value}))}/></div><div><Label>Description</Label><Textarea value={resource.description} onChange={e=>setResource(x=>({...x,description:e.target.value}))}/></div><label className="flex gap-2 text-sm"><input type="checkbox" checked={resource.is_published} onChange={e=>setResource(x=>({...x,is_published:e.target.checked}))}/>Publish to participants</label><Button disabled={!resource.title} onClick={addResource}>Create resource</Button></CardContent></Card></div>
+ <Card><CardHeader><CardTitle>Create resource</CardTitle></CardHeader><CardContent className="space-y-3"><div><Label>Curriculum module (optional)</Label><select aria-label="Curriculum module" className="w-full rounded-md border bg-background p-2 text-sm" value={resource.module_id} onChange={e=>setResource(x=>({...x,module_id:e.target.value}))}><option value="">General cohort reference</option>{selectableModules.map(m=><option key={m.id} value={m.id}>{m.sequence_number}. {m.title}</option>)}</select></div><div><Label>Title</Label><Input value={resource.title} onChange={e=>setResource(x=>({...x,title:e.target.value}))}/></div><div className="grid gap-3 sm:grid-cols-2"><div><Label>Type</Label><Input value={resource.resource_type} onChange={e=>setResource(x=>({...x,resource_type:e.target.value}))}/></div><div><Label>Month (optional)</Label><Input type="number" min={1} max={12} value={resource.month_number} onChange={e=>setResource(x=>({...x,month_number:e.target.value}))}/></div></div><div><Label>URL</Label><Input value={resource.url} onChange={e=>setResource(x=>({...x,url:e.target.value}))}/></div><div><Label>Description</Label><Textarea value={resource.description} onChange={e=>setResource(x=>({...x,description:e.target.value}))}/></div><label className="flex gap-2 text-sm"><input type="checkbox" checked={resource.is_published} onChange={e=>setResource(x=>({...x,is_published:e.target.checked}))}/>Publish to participants</label><Button disabled={!resource.title} onClick={addResource}>Create resource</Button></CardContent></Card></div>
  {editingEvent!==null&&
   cohortId===editingEvent.record.cohort_id&&
  <Card>
@@ -454,6 +458,10 @@ export default function RDPContentPage(){
      onChange={e=>setEditingResource(x=>x?{...x,title:e.target.value}:x)}/>
    </div>
    <div>
+    <Label>Curriculum module (optional)</Label>
+    <select aria-label="Edit curriculum module" className="w-full rounded-md border bg-background p-2 text-sm" value={editingResource.module_id??""} onChange={e=>setEditingResource(x=>x?{...x,module_id:e.target.value?Number(e.target.value):null}:x)}><option value="">General cohort reference</option>{selectableModules.map(m=><option key={m.id} value={m.id}>{m.sequence_number}. {m.title}</option>)}</select>
+   </div>
+   <div>
     <Label>Resource type</Label>
     <Input value={editingResource.resource_type}
      onChange={e=>setEditingResource(x=>x?{...x,resource_type:e.target.value}:x)}/>
@@ -504,7 +512,7 @@ export default function RDPContentPage(){
  </Card>}
 
  <div className="grid gap-6 xl:grid-cols-2"><Card><CardHeader><CardTitle>Events</CardTitle></CardHeader><CardContent className="space-y-3">{events.map(e=><div key={e.id} className="rounded-md border p-3"><div className="flex items-start justify-between gap-3"><div><p className="font-medium">{e.title}</p><p className="text-xs text-muted-foreground">{formatRdpEventTime(e.starts_at)} · {e.event_type}</p></div><Badge variant="outline">{e.is_published?'published':'hidden'}</Badge></div><Button size="sm" variant="outline" className="mt-3 mr-2" disabled={eventSaving||publicationBusy!==null} onClick={()=>beginEventEdit(e)}>Edit</Button><Button size="sm" variant="outline" className="mt-3 mr-2" disabled={publicationBusy!==null} onClick={()=>toggleEventPublication(e)}>{publicationBusy===`event-${e.id}`?'Saving...':e.is_published?'Unpublish':'Publish'}</Button><Button size="sm" variant="destructive" className="mt-3" disabled={deletingKey!==null||eventSaving||resourceSaving||publicationBusy!==null} onClick={()=>void deleteContent('event',e)}>Delete</Button></div>)}{!events.length&&<p className="text-sm text-muted-foreground">No events yet.</p>}</CardContent></Card>
- <Card><CardHeader><CardTitle>Resources</CardTitle></CardHeader><CardContent className="space-y-3">{resources.map(r=><div key={r.id} className="rounded-md border p-3"><div className="flex items-start justify-between gap-3"><div><p className="font-medium">{r.title}</p><p className="text-xs text-muted-foreground">{r.month_number?`Month ${r.month_number} · `:''}{r.resource_type}</p></div><Badge variant="outline">{r.is_published?'published':'hidden'}</Badge></div>{r.url&&<p className="mt-1 truncate text-xs text-muted-foreground">{r.url}</p>}<Button size="sm" variant="outline" className="mt-3 mr-2" disabled={publicationBusy!==null} onClick={()=>toggleResourcePublication(r)}>{publicationBusy===`resource-${r.id}`?'Saving...':r.is_published?'Unpublish':'Publish'}</Button><Button size="sm" variant="outline" className="mt-3 mr-2"
+ <Card><CardHeader><CardTitle>Resources</CardTitle></CardHeader><CardContent className="space-y-3">{resources.map(r=><div key={r.id} className="rounded-md border p-3"><div className="flex items-start justify-between gap-3"><div><p className="font-medium">{r.title}</p><p className="text-xs text-muted-foreground">{r.month_number?`Month ${r.month_number} · `:''}{r.module_id?`${modules.find(m=>m.id===r.module_id)?.title??'Curriculum module'} · `:''}{r.resource_type}</p></div><Badge variant="outline">{r.is_published?'published':'hidden'}</Badge></div>{r.url&&<p className="mt-1 truncate text-xs text-muted-foreground">{r.url}</p>}<Button size="sm" variant="outline" className="mt-3 mr-2" disabled={publicationBusy!==null} onClick={()=>toggleResourcePublication(r)}>{publicationBusy===`resource-${r.id}`?'Saving...':r.is_published?'Unpublish':'Publish'}</Button><Button size="sm" variant="outline" className="mt-3 mr-2"
  disabled={resourceSaving||publicationBusy!==null}
  onClick={()=>setEditingResource({...r})}>Edit</Button><Button size="sm" variant="destructive" className="mt-3" disabled={deletingKey!==null||eventSaving||resourceSaving||publicationBusy!==null} onClick={()=>void deleteContent('resource',r)}>Delete</Button></div>)}{!resources.length&&<p className="text-sm text-muted-foreground">No resources yet.</p>}</CardContent></Card></div>
  </>}

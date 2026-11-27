@@ -337,6 +337,8 @@ class RDPResource(Base, TimestampMixin):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     cohort_id: Mapped[int] = mapped_column(Integer, ForeignKey("rdp_cohorts.id", ondelete="CASCADE"), nullable=False, index=True)
+    # NULL preserves existing cohort-level references, including legacy cohorts.
+    module_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("rdp_curriculum_modules.id", ondelete="RESTRICT"), nullable=True, index=True)
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     resource_type: Mapped[str] = mapped_column(String(80), nullable=False, default="document")
     url: Mapped[str | None] = mapped_column(String(1000), nullable=True)

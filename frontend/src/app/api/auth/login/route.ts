@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { rejectCrossSiteMutation } from '@/lib/server/request-security'
 
-const BACKEND_URL = process.env.BACKEND_URL ?? 'http://localhost:8000'
+const BACKEND_URL = process.env.BACKEND_URL ?? 'http://127.0.0.1:8010'
 const COOKIE_NAME = 'admin_token'
 const COOKIE_MAX_AGE = 60 * 60 * 24 // 24 hours
 

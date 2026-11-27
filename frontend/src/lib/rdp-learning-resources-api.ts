@@ -4,7 +4,7 @@ const base = '/api/rdp-learning-resources'
 export type LearningResource = {
   id: number; programme_version_id: number; module_id: number; resource_code: string;
   title: string; audience: 'staff' | 'participant'; original_filename: string;
-  size_bytes: number; sha256: string; is_published: boolean
+  size_bytes: number; sha256: string; is_published: boolean; is_archived: boolean; file_revision: number
 }
 async function result<T>(response: Response): Promise<T> {
   if (!response.ok) throw await apiErrorFromResponse(response)
@@ -40,6 +40,52 @@ export async function setResourcePublished(id: number, is_published: boolean) {
 }
 export async function downloadResource(id: number, audience: 'admin' | 'mine', filename: string) {
   const response = await fetch(`${base}/${audience}/${id}/download`, { cache: 'no-store' })
+  if (!response.ok) throw await apiErrorFromResponse(response)
+  const blob = await response.blob()
+  const url = URL.createObjectURL(blob)
+  const anchor = document.createElement('a')
+  anchor.href = url
+  anchor.download = filename.replace(/[\\/]/g, '_')
+  document.body.append(anchor)
+  anchor.click()
+  anchor.remove()
+  window.setTimeout(() => URL.revokeObjectURL(url), 1500)
+}
+
+
+// M4.3B: Administrative lifecycle API. All requests use the protected BFF proxy.
+export type LearningResourceHistory = {
+  current_revision: number
+  versions: Array<{ revision_number: number; original_filename: string; sha256: string; size_bytes: number; replaced_at: string }>
+  audit: Array<{ action: string; actor_user_id: number | null; details: Record<string, unknown>; created_at: string }>
+}
+export async function updateResourceMetadata(id: number, payload: {
+  module_id: number; title: string; audience: 'participant' | 'staff'
+}) {
+  return result<LearningResource>(await fetch(`${base}/admin/${id}/metadata`, {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  }))
+}
+export async function archiveResource(id: number, archived: boolean) {
+  return result<LearningResource>(await fetch(`${base}/admin/${id}/archive`, {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ archived }),
+  }))
+}
+export async function replaceResource(id: number, file: File) {
+  const query = new URLSearchParams({ original_filename: file.name })
+  return result<LearningResource>(await fetch(`${base}/admin/${id}/replace?${query}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' },
+    body: file,
+  }))
+}
+export async function getResourceHistory(id: number) {
+  return result<LearningResourceHistory>(await fetch(`${base}/admin/${id}/history`, { cache: 'no-store' }))
+}
+export async function downloadHistoricalResource(id: number, revision: number, filename: string) {
+  const response = await fetch(`${base}/admin/${id}/revisions/${revision}/download`, { cache: 'no-store' })
   if (!response.ok) throw await apiErrorFromResponse(response)
   const blob = await response.blob()
   const url = URL.createObjectURL(blob)
